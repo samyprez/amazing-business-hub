@@ -4,24 +4,21 @@
 // Corre del lado del servidor (usa lib/supabase/server.ts), así las llaves
 // de Supabase nunca llegan al cliente.
 //
-// Esta versión usa el SCHEMA REAL de Amazing Business Hub:
+// Schema real de Amazing Business Hub:
 //   clients(company_name, is_active, ...)
 //   client_services(client_id, service_id, status, price, renewal_date)
 //   invoices(client_id, amount, status: 'paid'|'unpaid'|'overdue')
 //   payments(client_id, invoice_id, amount, method, paid_at)
 //   tickets(status: 'open'|'waiting'|'closed')
-//   leads(status: 'new'|'contacted'|'converted'|'lost')
+//   leads(name, service_interest, status, created_at)
 //   services(name)
 //
-// DISEÑO DEFENSIVO: cada query está envuelta en try/catch y cae a 0 / []
-// si la tabla está vacía, no existe todavía, o falla. El dashboard nunca
-// se rompe por falta de datos — simplemente muestra ceros.
+// DISENO DEFENSIVO: cada query esta envuelta en try/catch y cae a 0 / []
+// si la tabla esta vacia, no existe todavia, o falla. El dashboard nunca
+// se rompe por falta de datos.
 
 import { createClient } from '@/lib/supabase/server';
 
-// ---------------------------------------------------------------------------
-// Tipos
-// ---------------------------------------------------------------------------
 export type PaymentRow = {
   client_name: string;
   amount: number;
@@ -41,6 +38,12 @@ export type RenewalRow = {
   renewal_date: string | null;
 };
 
+export type LeadRow = {
+  name: string | null;
+  service_interest: string | null;
+  created_at: string | null;
+};
+
 export type DashboardData = {
   totalClients: number;
   monthlyRevenue: number;
@@ -50,9 +53,9 @@ export type DashboardData = {
   recentPayments: PaymentRow[];
   topClients: TopClientRow[];
   upcomingRenewals: RenewalRow[];
+  recentLeads: LeadRow[];
 };
 
-// Valor por defecto: todo en cero. Es lo que se renderiza si todo falla.
 const EMPTY: DashboardData = {
   totalClients: 0,
   monthlyRevenue: 0,
@@ -62,10 +65,9 @@ const EMPTY: DashboardData = {
   recentPayments: [],
   topClients: [],
   upcomingRenewals: [],
+  recentLeads: [],
 };
 
-// Helper: corre una promesa y devuelve un fallback si lanza o si Supabase
-// reporta error. Nunca propaga la excepción hacia arriba.
 async function safe<T>(fn: () => Promise<T>, fallback: T): Promise<T> {
   try {
     return await fn();
@@ -74,15 +76,9 @@ async function safe<T>(fn: () => Promise<T>, fallback: T): Promise<T> {
   }
 }
 
-// ---------------------------------------------------------------------------
-// Query principal
-// ---------------------------------------------------------------------------
 export async function getDashboardData(): Promise<DashboardData> {
   const supabase = await createClient();
 
-  // --- KPIs ---------------------------------------------------------------
-
-  // Total de clientes activos.
   const totalClients = await safe(async () => {
     const { count, error } = await supabase
       .from('clients')
@@ -92,7 +88,6 @@ export async function getDashboardData(): Promise<DashboardData> {
     return count ?? 0;
   }, 0);
 
-  // Leads nuevos (status = 'new').
   const newLeads = await safe(async () => {
     const { count, error } = await supabase
       .from('leads')
@@ -102,28 +97,26 @@ export async function getDashboardData(): Promise<DashboardData> {
     return count ?? 0;
   }, 0);
 
-  // Ingreso mensual recurrente: suma del price de los client_services activos.
-  // (El precio efectivo del servicio contratado vive en client_services, no en clients.)
   const monthlyRevenue = await safe(async () => {
     const { data, error } = await supabase
       .from('client_services')
       .select('price')
       .eq('status', 'active');
     if (error) throw error;
-    return (data ?? []).reduce((sum, r) => sum + Number(r.price ?? 0), 0);
+    const rows = (data ?? []) as { price: number | null }[];
+    return rows.reduce((sum, r) => sum + Number(r.price ?? 0), 0);
   }, 0);
 
-  // Outstanding: suma de facturas que NO están pagadas (unpaid + overdue).
   const outstanding = await safe(async () => {
     const { data, error } = await supabase
       .from('invoices')
       .select('amount')
       .neq('status', 'paid');
     if (error) throw error;
-    return (data ?? []).reduce((sum, r) => sum + Number(r.amount ?? 0), 0);
+    const rows = (data ?? []) as { amount: number | null }[];
+    return rows.reduce((sum, r) => sum + Number(r.amount ?? 0), 0);
   }, 0);
 
-  // Tickets abiertos (badge en el sidebar).
   const openTickets = await safe(async () => {
     const { count, error } = await supabase
       .from('tickets')
@@ -133,10 +126,6 @@ export async function getDashboardData(): Promise<DashboardData> {
     return count ?? 0;
   }, 0);
 
-  // --- Tablas / listas ----------------------------------------------------
-
-  // Pagos recientes. payments NO tiene status; el estado de cobro vive en
-  // invoices, así que aquí solo mostramos cliente, monto y método.
   const recentPayments = await safe<PaymentRow[]>(async () => {
     const { data, error } = await supabase
       .from('payments')
@@ -145,15 +134,12 @@ export async function getDashboardData(): Promise<DashboardData> {
       .limit(5);
     if (error) throw error;
     return (data ?? []).map((r: Record<string, unknown>) => ({
-      client_name: (r.clients as { company_name?: string } | null)?.company_name ?? '—',
+      client_name: (r.clients as { company_name?: string } | null)?.company_name ?? '\u2014',
       amount: Number(r.amount ?? 0),
       method: (r.method as string) ?? null,
     }));
   }, []);
 
-  // Top clientes por valor del servicio contratado.
-  // Salimos desde client_services (que tiene el price) y traemos el nombre
-  // del cliente y del servicio por relación.
   const topClients = await safe<TopClientRow[]>(async () => {
     const { data, error } = await supabase
       .from('client_services')
@@ -163,14 +149,13 @@ export async function getDashboardData(): Promise<DashboardData> {
       .limit(4);
     if (error) throw error;
     return (data ?? []).map((r: Record<string, unknown>) => ({
-      company_name: (r.clients as { company_name?: string } | null)?.company_name ?? '—',
+      company_name: (r.clients as { company_name?: string } | null)?.company_name ?? '\u2014',
       service_name: (r.services as { name?: string } | null)?.name ?? null,
       monthly: Number(r.price ?? 0),
       status: (r.status as string) ?? null,
     }));
   }, []);
 
-  // Renovaciones próximas: client_services con renewal_date a futuro.
   const upcomingRenewals = await safe<RenewalRow[]>(async () => {
     const today = new Date().toISOString().slice(0, 10);
     const { data, error } = await supabase
@@ -181,9 +166,25 @@ export async function getDashboardData(): Promise<DashboardData> {
       .limit(4);
     if (error) throw error;
     return (data ?? []).map((r: Record<string, unknown>) => ({
-      client_name: (r.clients as { company_name?: string } | null)?.company_name ?? '—',
+      client_name: (r.clients as { company_name?: string } | null)?.company_name ?? '\u2014',
       service_name: (r.services as { name?: string } | null)?.name ?? null,
       renewal_date: (r.renewal_date as string) ?? null,
+    }));
+  }, []);
+
+  const recentLeads = await safe<LeadRow[]>(async () => {
+    const { data, error } = await supabase
+      .from('leads')
+      .select('name, service_interest, created_at')
+      .eq('status', 'new')
+      .order('created_at', { ascending: false })
+      .limit(4);
+    if (error) throw error;
+    const rows = (data ?? []) as { name: string | null; service_interest: string | null; created_at: string | null }[];
+    return rows.map((r) => ({
+      name: r.name ?? null,
+      service_interest: r.service_interest ?? null,
+      created_at: r.created_at ?? null,
     }));
   }, []);
 
@@ -196,6 +197,7 @@ export async function getDashboardData(): Promise<DashboardData> {
     recentPayments,
     topClients,
     upcomingRenewals,
+    recentLeads,
   };
 }
 
