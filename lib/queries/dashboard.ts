@@ -1,9 +1,6 @@
 // lib/queries/dashboard.ts
 //
-// Capa de queries tipada para el dashboard de admin.
-// Corre del lado del servidor (usa lib/supabase/server.ts), así las llaves
-// de Supabase nunca llegan al cliente.
-//
+// Capa de queries tipada para el dashboard de admin (server-side).
 // Schema real de Amazing Business Hub:
 //   clients(company_name, is_active, ...)
 //   client_services(client_id, service_id, status, price, renewal_date)
@@ -11,11 +8,10 @@
 //   payments(client_id, invoice_id, amount, method, paid_at)
 //   tickets(status: 'open'|'waiting'|'closed')
 //   leads(name, service_interest, status, created_at)
-//   services(name)
+//   services(name, category)
 //
-// DISENO DEFENSIVO: cada query esta envuelta en try/catch y cae a 0 / []
-// si la tabla esta vacia, no existe todavia, o falla. El dashboard nunca
-// se rompe por falta de datos.
+// DISENO DEFENSIVO: cada query cae a 0 / [] si la tabla esta vacia, no
+// existe, o falla. El dashboard nunca se rompe por falta de datos.
 
 import { createClient } from '@/lib/supabase/server';
 
@@ -44,6 +40,17 @@ export type LeadRow = {
   created_at: string | null;
 };
 
+// Nuevo (Nivel 2): punto de la grafica mensual y rebanada del donut.
+export type RevenuePoint = {
+  label: string; // 'Jan', 'Feb', ...
+  amount: number;
+};
+
+export type ServiceSlice = {
+  label: string; // categoria o nombre del servicio
+  amount: number;
+};
+
 export type DashboardData = {
   totalClients: number;
   monthlyRevenue: number;
@@ -54,6 +61,8 @@ export type DashboardData = {
   topClients: TopClientRow[];
   upcomingRenewals: RenewalRow[];
   recentLeads: LeadRow[];
+  revenueSeries: RevenuePoint[];
+  revenueByService: ServiceSlice[];
 };
 
 const EMPTY: DashboardData = {
@@ -66,6 +75,8 @@ const EMPTY: DashboardData = {
   topClients: [],
   upcomingRenewals: [],
   recentLeads: [],
+  revenueSeries: [],
+  revenueByService: [],
 };
 
 async function safe<T>(fn: () => Promise<T>, fallback: T): Promise<T> {
@@ -188,6 +199,57 @@ export async function getDashboardData(): Promise<DashboardData> {
     }));
   }, []);
 
+  // --- Nivel 2: serie mensual de ingresos (ultimos 6 meses, desde payments) ---
+  const revenueSeries = await safe<RevenuePoint[]>(async () => {
+    const now = new Date();
+    const since = new Date(now.getFullYear(), now.getMonth() - 5, 1);
+    const { data, error } = await supabase
+      .from('payments')
+      .select('amount, paid_at')
+      .gte('paid_at', since.toISOString());
+    if (error) throw error;
+
+    const buckets: { label: string; key: string; amount: number }[] = [];
+    for (let i = 5; i >= 0; i--) {
+      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      buckets.push({
+        label: d.toLocaleString('en-US', { month: 'short' }),
+        key: `${d.getFullYear()}-${d.getMonth()}`,
+        amount: 0,
+      });
+    }
+    const rows = (data ?? []) as { amount: number | null; paid_at: string | null }[];
+    for (const r of rows) {
+      if (!r.paid_at) continue;
+      const d = new Date(r.paid_at);
+      const key = `${d.getFullYear()}-${d.getMonth()}`;
+      const b = buckets.find((x) => x.key === key);
+      if (b) b.amount += Number(r.amount ?? 0);
+    }
+    return buckets.map((b) => ({ label: b.label, amount: b.amount }));
+  }, []);
+
+  // --- Nivel 2: ingresos por servicio (client_services activos, agrupado) ---
+  const revenueByService = await safe<ServiceSlice[]>(async () => {
+    const { data, error } = await supabase
+      .from('client_services')
+      .select('price, status, services(name, category)')
+      .eq('status', 'active');
+    if (error) throw error;
+    const rows = (data ?? []) as {
+      price: number | null;
+      services: { name?: string; category?: string } | null;
+    }[];
+    const map = new Map<string, number>();
+    for (const r of rows) {
+      const label = r.services?.category || r.services?.name || 'Other';
+      map.set(label, (map.get(label) ?? 0) + Number(r.price ?? 0));
+    }
+    return [...map.entries()]
+      .map(([label, amount]) => ({ label, amount }))
+      .sort((a, b) => b.amount - a.amount);
+  }, []);
+
   return {
     totalClients,
     monthlyRevenue,
@@ -198,6 +260,8 @@ export async function getDashboardData(): Promise<DashboardData> {
     topClients,
     upcomingRenewals,
     recentLeads,
+    revenueSeries,
+    revenueByService,
   };
 }
 
