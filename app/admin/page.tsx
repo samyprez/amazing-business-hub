@@ -12,6 +12,7 @@ import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 import RawPage from '@/components/RawPage';
 import NewClientModal from '@/components/NewClientModal';
+import CsvImportModal from '@/components/CsvImportModal';
 import { markup, script } from '@/content/admin';
 import { getDashboardData } from '@/lib/queries/dashboard';
 import { renderAdminMarkup } from '@/lib/render/admin';
@@ -36,6 +37,7 @@ export default async function AdminPage() {
     <>
       <RawPage markup={populatedMarkup} script={script} />
       <NewClientModal />
+      <CsvImportModal />
     </>
   );
 }
