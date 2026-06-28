@@ -31,6 +31,8 @@ export async function POST(request: Request) {
     company_name?: string;
     contact_name?: string | null;
     email?: string | null;
+    phone?: string | null;
+    address?: string | null;
   };
   try {
     body = await request.json();
@@ -53,6 +55,8 @@ export async function POST(request: Request) {
       company_name: companyName,
       contact_name: (body.contact_name || '').trim() || null,
       email: (body.email || '').trim() || null,
+      phone: (body.phone || '').trim() || null,
+      address: (body.address || '').trim() || null,
       is_active: true,
     })
     .select('id, company_name')
