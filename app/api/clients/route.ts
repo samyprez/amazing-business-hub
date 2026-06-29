@@ -68,3 +68,32 @@ export async function POST(request: Request) {
 
   return NextResponse.json({ client: data }, { status: 201 });
 }
+
+// Lista todos los clientes (para la vista de Clientes). Misma validacion de
+// sesion + rol; la lectura corre server-side, las llaves no llegan al cliente.
+export async function GET() {
+  const supabase = await createClient();
+
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) {
+    return NextResponse.json({ error: 'No autenticado.' }, { status: 401 });
+  }
+
+  const { data: profile } = await supabase
+    .from('profiles').select('role').eq('id', user.id).single();
+  const role = profile?.role;
+  if (!role || !['staff', 'admin', 'super_admin'].includes(role)) {
+    return NextResponse.json({ error: 'Sin permiso.' }, { status: 403 });
+  }
+
+  const { data, error } = await supabase
+    .from('clients')
+    .select('id, company_name, contact_name, email, phone, address, is_active')
+    .order('company_name', { ascending: true });
+
+  if (error) {
+    return NextResponse.json({ error: error.message }, { status: 400 });
+  }
+
+  return NextResponse.json({ clients: data ?? [] }, { status: 200 });
+}
