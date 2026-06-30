@@ -16,6 +16,7 @@ import CsvImportModal from '@/components/CsvImportModal';
 import ClientsListModal from '@/components/ClientsListModal';
 import TicketsModal from '@/components/TicketsModal';
 import LeadsModal from '@/components/LeadsModal';
+import InvoicesModal from '@/components/InvoicesModal';
 import { markup, script } from '@/content/admin';
 import { getDashboardData } from '@/lib/queries/dashboard';
 import { renderAdminMarkup } from '@/lib/render/admin';
@@ -44,6 +45,7 @@ export default async function AdminPage() {
       <ClientsListModal />
       <TicketsModal />
       <LeadsModal />
+      <InvoicesModal />
     </>
   );
 }
