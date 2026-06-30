@@ -18,6 +18,7 @@ import TicketsModal from '@/components/TicketsModal';
 import LeadsModal from '@/components/LeadsModal';
 import InvoicesModal from '@/components/InvoicesModal';
 import ServicesModal from '@/components/ServicesModal';
+import NotesModal from '@/components/NotesModal';
 import { markup, script } from '@/content/admin';
 import { getDashboardData } from '@/lib/queries/dashboard';
 import { renderAdminMarkup } from '@/lib/render/admin';
@@ -48,6 +49,7 @@ export default async function AdminPage() {
       <LeadsModal />
       <InvoicesModal />
       <ServicesModal />
+      <NotesModal />
     </>
   );
 }
