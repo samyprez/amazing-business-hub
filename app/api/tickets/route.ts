@@ -11,8 +11,8 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 
-const STATUSES = ['abierto', 'en_proceso', 'cerrado'];
-const PRIORITIES = ['baja', 'media', 'alta'];
+const STATUSES = ['open', 'waiting', 'closed'];
+const PRIORITIES = ['low', 'medium', 'high'];
 
 async function requireStaff() {
   const supabase = await createClient();
@@ -65,7 +65,7 @@ export async function POST(request: Request) {
   if (!subject) {
     return NextResponse.json({ error: 'El asunto es obligatorio.' }, { status: 400 });
   }
-  const priority = PRIORITIES.includes(body.priority || '') ? body.priority : 'media';
+  const priority = PRIORITIES.includes(body.priority || '') ? body.priority : 'medium';
 
   const { data, error } = await gate.supabase
     .from('tickets')
@@ -74,7 +74,7 @@ export async function POST(request: Request) {
       client_id: body.client_id || null,
       priority,
       description: (body.description || '').toString().trim() || null,
-      status: 'abierto',
+      status: 'open',
     })
     .select('id, subject, description, status, priority, created_at, client_id, clients(company_name)')
     .single();

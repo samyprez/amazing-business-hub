@@ -26,8 +26,8 @@ type Ticket = {
   id: string;
   subject: string;
   description: string | null;
-  status: 'abierto' | 'en_proceso' | 'cerrado';
-  priority: 'baja' | 'media' | 'alta';
+  status: 'open' | 'waiting' | 'closed';
+  priority: 'low' | 'medium' | 'high';
   created_at: string;
   client_id: string | null;
   clients: { company_name: string } | null;
@@ -36,31 +36,31 @@ type Ticket = {
 type ClientOption = { id: string; company_name: string };
 
 const STATUS_LABEL: Record<Ticket['status'], string> = {
-  abierto: 'Abierto',
-  en_proceso: 'En proceso',
-  cerrado: 'Cerrado',
+  open: 'Open',
+  waiting: 'Waiting',
+  closed: 'Closed',
 };
 
 const PRIORITY_LABEL: Record<Ticket['priority'], string> = {
-  baja: 'Baja',
-  media: 'Media',
-  alta: 'Alta',
+  low: 'Low',
+  medium: 'Medium',
+  high: 'High',
 };
 
 function statusStyle(s: Ticket['status']): React.CSSProperties {
   const map = {
-    abierto: { background: '#e7f7ee', color: C.good },
-    en_proceso: { background: '#fff4e0', color: C.warn },
-    cerrado: { background: '#f0f2f2', color: C.sub },
+    open: { background: '#e7f7ee', color: C.good },
+    waiting: { background: '#fff4e0', color: C.warn },
+    closed: { background: '#f0f2f2', color: C.sub },
   };
   return { ...badgeBase, ...map[s] };
 }
 
 function priorityStyle(p: Ticket['priority']): React.CSSProperties {
   const map = {
-    alta: { background: '#fdecec', color: C.bad },
-    media: { background: C.mist, color: C.tealDeep },
-    baja: { background: '#f0f2f2', color: C.sub },
+    high: { background: '#fdecec', color: C.bad },
+    medium: { background: C.mist, color: C.tealDeep },
+    low: { background: '#f0f2f2', color: C.sub },
   };
   return { ...badgeBase, ...map[p] };
 }
@@ -85,7 +85,7 @@ export default function TicketsModal() {
   // Form
   const [subject, setSubject] = useState('');
   const [clientId, setClientId] = useState('');
-  const [priority, setPriority] = useState<Ticket['priority']>('media');
+  const [priority, setPriority] = useState<Ticket['priority']>('medium');
   const [description, setDescription] = useState('');
 
   const loadedRef = useRef(false);
@@ -167,7 +167,7 @@ export default function TicketsModal() {
       setTickets((prev) => [json.ticket as Ticket, ...prev]);
       setSubject('');
       setClientId('');
-      setPriority('media');
+      setPriority('medium');
       setDescription('');
       setShowForm(false);
     } catch (err) {
@@ -198,7 +198,7 @@ export default function TicketsModal() {
 
   if (!open) return null;
 
-  const openCount = tickets.filter((t) => t.status !== 'cerrado').length;
+  const openCount = tickets.filter((t) => t.status !== 'closed').length;
 
   return (
     <div style={overlay} onClick={() => setOpen(false)}>
@@ -239,9 +239,9 @@ export default function TicketsModal() {
                 value={priority}
                 onChange={(e) => setPriority(e.target.value as Ticket['priority'])}
               >
-                <option value="baja">Prioridad: Baja</option>
-                <option value="media">Prioridad: Media</option>
-                <option value="alta">Prioridad: Alta</option>
+                <option value="low">Priority: Low</option>
+                <option value="medium">Priority: Medium</option>
+                <option value="high">Priority: High</option>
               </select>
             </div>
             <textarea
