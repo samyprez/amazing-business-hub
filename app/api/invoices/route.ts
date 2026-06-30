@@ -88,7 +88,7 @@ export async function PATCH(request: Request) {
     return NextResponse.json({ error: gate.error }, { status: gate.status });
   }
 
-  let body: { id?: string; status?: string };
+  let body: { id?: string; status?: string; number?: string | null; due_date?: string | null };
   try {
     body = await request.json();
   } catch {
@@ -96,16 +96,19 @@ export async function PATCH(request: Request) {
   }
 
   if (!body.id) return NextResponse.json({ error: 'Falta el id.' }, { status: 400 });
-  if (!body.status || !STATUSES.includes(body.status)) {
-    return NextResponse.json({ error: 'Estado invalido.' }, { status: 400 });
+
+  const patch: Record<string, unknown> = {};
+  if (body.status !== undefined) {
+    if (!STATUSES.includes(body.status)) return NextResponse.json({ error: 'Estado invalido.' }, { status: 400 });
+    patch.status = body.status;
   }
+  if (body.number !== undefined) patch.number = body.number;
+  if (body.due_date !== undefined) patch.due_date = body.due_date;
+  if (Object.keys(patch).length === 0) return NextResponse.json({ error: 'Nada que actualizar.' }, { status: 400 });
 
   const { data, error } = await gate.supabase
-    .from('invoices')
-    .update({ status: body.status })
-    .eq('id', body.id)
-    .select('id, status')
-    .single();
+    .from('invoices').update(patch).eq('id', body.id)
+    .select('id, number, status, due_date').single();
 
   if (error) return NextResponse.json({ error: error.message }, { status: 400 });
   return NextResponse.json({ invoice: data }, { status: 200 });
