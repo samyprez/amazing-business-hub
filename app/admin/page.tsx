@@ -1,4 +1,4 @@
-// app/admin/page.tsx
+﻿// app/admin/page.tsx
 //
 // Server component del dashboard de admin.
 //  1. Verifica sesion + rol (staff o superior) -> redirige si no.
@@ -14,6 +14,7 @@ import RawPage from '@/components/RawPage';
 import NewClientModal from '@/components/NewClientModal';
 import CsvImportModal from '@/components/CsvImportModal';
 import ClientsListModal from '@/components/ClientsListModal';
+import TicketsModal from '@/components/TicketsModal';
 import { markup, script } from '@/content/admin';
 import { getDashboardData } from '@/lib/queries/dashboard';
 import { renderAdminMarkup } from '@/lib/render/admin';
@@ -40,6 +41,7 @@ export default async function AdminPage() {
       <NewClientModal />
       <CsvImportModal />
       <ClientsListModal />
+      <TicketsModal />
     </>
   );
 }
