@@ -93,8 +93,7 @@ export async function getDashboardData(): Promise<DashboardData> {
   const totalClients = await safe(async () => {
     const { count, error } = await supabase
       .from('clients')
-      .select('*', { count: 'exact', head: true })
-      .eq('is_active', true);
+      .select('*', { count: 'exact', head: true });
     if (error) throw error;
     return count ?? 0;
   }, 0);

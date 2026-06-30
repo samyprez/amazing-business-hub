@@ -22,7 +22,7 @@ const C = {
   mist: '#eafaf7',
 };
 
-type Status = 'nuevo' | 'contactado' | 'calificado' | 'propuesta' | 'ganado' | 'perdido';
+type Status = 'new' | 'contacted' | 'converted' | 'lost';
 
 type Lead = {
   id: string;
@@ -37,24 +37,20 @@ type Lead = {
 };
 
 const STATUS_LABEL: Record<Status, string> = {
-  nuevo: 'Nuevo',
-  contactado: 'Contactado',
-  calificado: 'Calificado',
-  propuesta: 'Propuesta',
-  ganado: 'Ganado',
-  perdido: 'Perdido',
+  new: 'New',
+  contacted: 'Contacted',
+  converted: 'Converted',
+  lost: 'Lost',
 };
 
-const SOURCES = ['Web', 'Referido', 'Redes sociales', 'Llamada', 'Evento', 'Otro'];
+const SOURCES = ['Web', 'Referral', 'Social Media', 'Phone', 'Event', 'Other'];
 
 function statusStyle(s: Status): React.CSSProperties {
   const map: Record<Status, { background: string; color: string }> = {
-    nuevo: { background: C.mist, color: C.tealDeep },
-    contactado: { background: '#eaf2fc', color: C.blue },
-    calificado: { background: '#fff4e0', color: C.warn },
-    propuesta: { background: '#f3ecfb', color: '#7a4fc0' },
-    ganado: { background: '#e7f7ee', color: C.good },
-    perdido: { background: '#fdecec', color: C.bad },
+    new: { background: C.mist, color: C.tealDeep },
+    contacted: { background: '#eaf2fc', color: C.blue },
+    converted: { background: '#e7f7ee', color: C.good },
+    lost: { background: '#fdecec', color: C.bad },
   };
   return { ...badgeBase, ...map[s] };
 }
@@ -183,8 +179,8 @@ export default function LeadsModal() {
 
   if (!open) return null;
 
-  const ganados = leads.filter((l) => l.status === 'ganado').length;
-  const activos = leads.filter((l) => !['ganado', 'perdido'].includes(l.status)).length;
+  const ganados = leads.filter((l) => l.status === 'converted').length;
+  const activos = leads.filter((l) => !['converted', 'lost'].includes(l.status)).length;
 
   return (
     <div style={overlay} onClick={() => setOpen(false)}>

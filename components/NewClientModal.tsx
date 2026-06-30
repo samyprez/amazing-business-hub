@@ -22,8 +22,6 @@ export default function NewClientModal() {
   const [companyName, setCompanyName] = useState('');
   const [contactName, setContactName] = useState('');
   const [email, setEmail] = useState('');
-  const [phone, setPhone] = useState('');
-  const [address, setAddress] = useState('');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -44,8 +42,6 @@ export default function NewClientModal() {
     setCompanyName('');
     setContactName('');
     setEmail('');
-    setPhone('');
-    setAddress('');
     setError(null);
   }
 
@@ -70,8 +66,6 @@ export default function NewClientModal() {
           company_name: companyName.trim(),
           contact_name: contactName.trim() || null,
           email: email.trim() || null,
-          phone: phone.trim() || null,
-          address: address.trim() || null,
         }),
       });
       const json = await res.json();
@@ -124,22 +118,6 @@ export default function NewClientModal() {
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           placeholder="Ej. maria@lacocina.com"
-        />
-
-        <label style={label}>Teléfono</label>
-        <input
-          style={input}
-          value={phone}
-          onChange={(e) => setPhone(e.target.value)}
-          placeholder="Ej. (416) 555-0199"
-        />
-
-        <label style={label}>Dirección</label>
-        <input
-          style={input}
-          value={address}
-          onChange={(e) => setAddress(e.target.value)}
-          placeholder="Ej. 123 Yonge St, Toronto, ON"
         />
 
         {error && <div style={errBox}>{error}</div>}

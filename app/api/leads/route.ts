@@ -8,7 +8,7 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 
-const STATUSES = ['nuevo', 'contactado', 'calificado', 'propuesta', 'ganado', 'perdido'];
+const STATUSES = ['new', 'contacted', 'converted', 'lost'];
 
 async function requireStaff() {
   const supabase = await createClient();
@@ -75,7 +75,7 @@ export async function POST(request: Request) {
       phone: clean(body.phone),
       source: clean(body.source),
       notes: clean(body.notes),
-      status: 'nuevo',
+      status: 'new',
     })
     .select('id, name, company, email, phone, source, status, notes, created_at')
     .single();

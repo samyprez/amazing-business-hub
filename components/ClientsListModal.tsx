@@ -31,9 +31,6 @@ type Client = {
   company_name: string;
   contact_name: string | null;
   email: string | null;
-  phone: string | null;
-  address: string | null;
-  is_active: boolean | null;
 };
 
 function initials(name: string): string {
@@ -120,7 +117,7 @@ export default function ClientsListModal() {
   const needle = q.trim().toLowerCase();
   const filtered = needle
     ? clients.filter((c) =>
-        [c.company_name, c.contact_name, c.email, c.phone, c.address]
+        [c.company_name, c.contact_name, c.email]
           .filter(Boolean)
           .some((v) => String(v).toLowerCase().includes(needle))
       )
@@ -174,21 +171,19 @@ export default function ClientsListModal() {
                   <th style={th}>Empresa</th>
                   <th style={th}>Contacto</th>
                   <th style={th}>Email</th>
-                  <th style={th}>Teléfono</th>
-                  <th style={th}>Estado</th>
                 </tr>
               </thead>
               <tbody>
                 {loading ? (
                   <tr>
-                    <td style={td} colSpan={5}>
+                    <td style={td} colSpan={3}>
                       Cargando clientes…
                     </td>
                   </tr>
                 ) : filtered.length === 0 ? (
                   <tr>
-                    <td style={{ ...td, color: C.sub }} colSpan={5}>
-                      Ningún cliente coincide con “{q}”.
+                    <td style={{ ...td, color: C.sub }} colSpan={3}>
+                      Ningún cliente coincide con &quot;{q}&quot;.
                     </td>
                   </tr>
                 ) : (
@@ -202,12 +197,6 @@ export default function ClientsListModal() {
                       </td>
                       <td style={td}>{c.contact_name || '—'}</td>
                       <td style={td}>{c.email || '—'}</td>
-                      <td style={td}>{c.phone || '—'}</td>
-                      <td style={td}>
-                        <span style={c.is_active === false ? stOff : stOn}>
-                          {c.is_active === false ? 'Inactivo' : 'Activo'}
-                        </span>
-                      </td>
                     </tr>
                   ))
                 )}
