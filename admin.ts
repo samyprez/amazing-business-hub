@@ -68,6 +68,291 @@ document.querySelectorAll('.side a').forEach(function(a){
   };
 });
 
+// ── Tickets ───────────────────────────────────────────────────────────────────────────
+var _tkData = [];
+var _tkClients = [];
+
+async function loadTickets(){
+  try{
+    var r = await fetch('/api/tickets');
+    var j = await r.json();
+    _tkData = j.data || [];
+    renderTickets();
+  }catch(e){
+    var el = document.getElementById('tickets-table');
+    if(el) el.innerHTML = '<div style="padding:20px;color:#ef4444">Error loading tickets: '+e.message+'</div>';
+  }
+}
+
+function tkPrioBadge(p){
+  var colors = {high:'#ef4444',medium:'#f59e0b',low:'#84CC16'};
+  return '<span style="display:inline-block;padding:2px 10px;border-radius:12px;font-size:.75rem;font-weight:700;background:'+((colors[p]||'#9ca3af')+'22')+';color:'+(colors[p]||'#9ca3af')+'">'+p+'</span>';
+}
+
+function tkStatusBadge(s){
+  var colors = {open:'#3b82f6',waiting:'#f59e0b',closed:'#9ca3af'};
+  return '<span style="display:inline-block;padding:2px 10px;border-radius:12px;font-size:.75rem;font-weight:700;background:'+((colors[s]||'#9ca3af')+'22')+';color:'+(colors[s]||'#9ca3af')+'">'+s+'</span>';
+}
+
+function renderTickets(){
+  var statusF = (document.getElementById('tk-filter-status')||{}).value||'';
+  var prioF = (document.getElementById('tk-filter-prio')||{}).value||'';
+  var searchF = ((document.getElementById('tk-search')||{}).value||'').toLowerCase();
+  var rows = _tkData.filter(function(t){
+    if(statusF && t.status!==statusF) return false;
+    if(prioF && t.priority!==prioF) return false;
+    if(searchF && !(t.subject||'').toLowerCase().includes(searchF) && !((t.clients&&t.clients.company_name)||'').toLowerCase().includes(searchF)) return false;
+    return true;
+  });
+  var el = document.getElementById('tickets-table');
+  if(!el) return;
+  if(!rows.length){
+    el.innerHTML = '<div style="padding:40px;text-align:center;color:#9ca3af">No tickets found.</div>';
+    return;
+  }
+  var html = '<table style="width:100%;border-collapse:collapse"><thead><tr style="border-bottom:1px solid #e7eded;background:#f7fee7"><th style="text-align:left;padding:12px 16px;font-size:.75rem;color:#697479;font-weight:600">Client</th><th style="text-align:left;padding:12px 16px;font-size:.75rem;color:#697479;font-weight:600">Subject</th><th style="padding:12px 16px;font-size:.75rem;color:#697479;font-weight:600">Priority</th><th style="padding:12px 16px;font-size:.75rem;color:#697479;font-weight:600">Status</th><th style="text-align:left;padding:12px 16px;font-size:.75rem;color:#697479;font-weight:600">Date</th><th style="padding:12px;font-size:.75rem;color:#697479;font-weight:600">Actions</th></tr></thead><tbody>';
+  rows.forEach(function(t){
+    var client = (t.clients&&t.clients.company_name)||'Unknown';
+    var date = t.created_at ? new Date(t.created_at).toLocaleDateString() : '';
+    html += '<tr style="border-bottom:1px solid #f0f0f0;transition:background .15s" onmouseover="this.style.background='#fafafa'" onmouseout="this.style.background=''"><td style="padding:14px 16px;font-size:.875rem;font-weight:600;color:#1c2225">'+client+'</td><td style="padding:14px 16px;font-size:.875rem;color:#374151;max-width:240px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+t.subject+'</td><td style="padding:14px 16px;text-align:center">'+tkPrioBadge(t.priority)+'</td><td style="padding:14px 16px;text-align:center">'+tkStatusBadge(t.status)+'</td><td style="padding:14px 16px;font-size:.8rem;color:#697479">'+date+'</td><td style="padding:14px 12px;text-align:center"><select onchange="updateTicketStatus(''+t.id+'',this)" style="border:1px solid #e7eded;border-radius:6px;padding:4px 6px;font-size:.75rem;cursor:pointer"><option value="">Update</option><option value="open"'+( t.status==='open'?' selected':'')+'>Open</option><option value="waiting"'+(t.status==='waiting'?' selected':'')+'>Waiting</option><option value="closed"'+(t.status==='closed'?' selected':'')+'>Closed</option></select></td></tr>';
+  });
+  html += '</tbody></table>';
+  el.innerHTML = html;
+}
+
+async function updateTicketStatus(id, sel){
+  var val = sel.value;
+  if(!val) return;
+  try{
+    await fetch('/api/tickets/'+id, {method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({status:val})});
+    await loadTickets();
+  }catch(e){ alert('Error: '+e.message); }
+}
+
+async function openTicketModal(){
+  document.getElementById('ticket-modal').style.display='block';
+  if(!_tkClients.length){
+    var r = await fetch('/api/clients');
+    var j = await r.json();
+    _tkClients = j.data||[];
+  }
+  var sel = document.getElementById('tk-client');
+  if(sel){
+    sel.innerHTML = '<option value="">Select client...</option>';
+    _tkClients.forEach(function(c){ sel.innerHTML += '<option value="'+c.id+'">'+(c.company_name||c.contact_name||'Client')+'</option>'; });
+  }
+}
+
+function closeTicketModal(){
+  document.getElementById('ticket-modal').style.display='none';
+  var cl=document.getElementById('tk-client'); if(cl) cl.value='';
+  var s=document.getElementById('tk-subject'); if(s) s.value='';
+  var d=document.getElementById('tk-description'); if(d) d.value='';
+}
+
+async function createTicket(e){
+  e.preventDefault();
+  var body = {
+    client_id: document.getElementById('tk-client').value,
+    subject: document.getElementById('tk-subject').value,
+    description: document.getElementById('tk-description').value,
+    priority: document.getElementById('tk-priority').value,
+    status: document.getElementById('tk-status').value,
+  };
+  try{
+    var r = await fetch('/api/tickets',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+    var j = await r.json();
+    if(j.error) throw new Error(j.error);
+    closeTicketModal();
+    await loadTickets();
+  }catch(e){ alert('Error creating ticket: '+e.message); }
+}
+
+// ── Invoices ─────────────────────────────────────────────────────────────────────────
+var _invData = [];
+var _invClients = [];
+var _invProducts = [];
+var _invLines = [];
+
+async function loadInvoices(){
+  try{
+    var r = await fetch('/api/invoices');
+    var j = await r.json();
+    _invData = j.data||[];
+    renderInvoices();
+  }catch(e){
+    var el = document.getElementById('invoices-table');
+    if(el) el.innerHTML = '<div style="padding:20px;color:#ef4444">Error loading invoices: '+e.message+'</div>';
+  }
+}
+
+function invStatusBadge(s){
+  var cfg = {paid:{bg:'#dcfce7',color:'#16a34a'},unpaid:{bg:'#fef9c3',color:'#ca8a04'},overdue:{bg:'#fee2e2',color:'#dc2626'}};
+  var c = cfg[s]||{bg:'#f3f4f6',color:'#6b7280'};
+  return '<span style="display:inline-block;padding:2px 10px;border-radius:12px;font-size:.75rem;font-weight:700;background:'+c.bg+';color:'+c.color+'">'+s+'</span>';
+}
+
+function renderInvoices(){
+  var statusF = (document.getElementById('inv-filter-status')||{}).value||'';
+  var searchF = ((document.getElementById('inv-search')||{}).value||'').toLowerCase();
+  var rows = _invData.filter(function(inv){
+    if(statusF && inv.status!==statusF) return false;
+    if(searchF && !((inv.number||'').toLowerCase().includes(searchF)) && !((inv.clients&&inv.clients.company_name)||'').toLowerCase().includes(searchF)) return false;
+    return true;
+  });
+  var el = document.getElementById('invoices-table');
+  if(!el) return;
+  if(!rows.length){
+    el.innerHTML = '<div style="padding:40px;text-align:center;color:#9ca3af">No invoices found.</div>';
+    return;
+  }
+  var html = '<table style="width:100%;border-collapse:collapse"><thead><tr style="border-bottom:1px solid #e7eded;background:#f7fee7"><th style="text-align:left;padding:12px 16px;font-size:.75rem;color:#697479;font-weight:600">Invoice #</th><th style="text-align:left;padding:12px 16px;font-size:.75rem;color:#697479;font-weight:600">Client</th><th style="text-align:right;padding:12px 16px;font-size:.75rem;color:#697479;font-weight:600">Amount</th><th style="padding:12px 16px;font-size:.75rem;color:#697479;font-weight:600">Status</th><th style="text-align:left;padding:12px 16px;font-size:.75rem;color:#697479;font-weight:600">Issued</th><th style="text-align:left;padding:12px 16px;font-size:.75rem;color:#697479;font-weight:600">Due</th><th style="padding:12px;font-size:.75rem;color:#697479;font-weight:600">Actions</th></tr></thead><tbody>';
+  rows.forEach(function(inv){
+    var client = (inv.clients&&inv.clients.company_name)||'Unknown';
+    var amount = parseFloat(inv.amount||0).toFixed(2);
+    html += '<tr style="border-bottom:1px solid #f0f0f0;transition:background .15s" onmouseover="this.style.background='#fafafa'" onmouseout="this.style.background=''"><td style="padding:14px 16px;font-size:.875rem;font-weight:600;color:#1c2225">'+(inv.number||'—')+'</td><td style="padding:14px 16px;font-size:.875rem;color:#374151">'+client+'</td><td style="padding:14px 16px;font-size:.875rem;font-weight:700;color:#1c2225;text-align:right">$'+amount+'</td><td style="padding:14px 16px;text-align:center">'+invStatusBadge(inv.status)+'</td><td style="padding:14px 16px;font-size:.8rem;color:#697479">'+(inv.issued_at||'')+'</td><td style="padding:14px 16px;font-size:.8rem;color:#697479">'+(inv.due_date||'')+'</td><td style="padding:14px 12px;text-align:center"><select onchange="updateInvStatus(''+inv.id+'',this)" style="border:1px solid #e7eded;border-radius:6px;padding:4px 6px;font-size:.75rem;cursor:pointer"><option value="">Update</option><option value="unpaid">Unpaid</option><option value="paid">Paid</option><option value="overdue">Overdue</option></select></td></tr>';
+  });
+  html += '</tbody></table>';
+  el.innerHTML = html;
+}
+
+async function updateInvStatus(id, sel){
+  var val = sel.value;
+  if(!val) return;
+  try{
+    await fetch('/api/invoices/'+id, {method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({status:val})});
+    await loadInvoices();
+  }catch(e){ alert('Error: '+e.message); }
+}
+
+async function openInvModal(){
+  _invLines = [];
+  renderInvLines();
+  document.getElementById('inv-modal').style.display='block';
+  if(!_invClients.length){
+    var r = await fetch('/api/clients');
+    var j = await r.json();
+    _invClients = j.data||[];
+  }
+  var sel = document.getElementById('inv-client');
+  if(sel){
+    sel.innerHTML = '<option value="">Select client...</option>';
+    _invClients.forEach(function(c){ sel.innerHTML += '<option value="'+c.id+'">'+(c.company_name||c.contact_name||'Client')+'</option>'; });
+  }
+  try{
+    var pr = await fetch('/api/stripe/products');
+    var pj = await pr.json();
+    _invProducts = pj.products||[];
+    var psel = document.getElementById('inv-product-select');
+    if(psel && _invProducts.length){
+      psel.innerHTML = '<option value="">+ From catalog</option>';
+      _invProducts.forEach(function(p,i){
+        var price = p.prices&&p.prices[0] ? (p.prices[0].unit_amount/100).toFixed(2) : '0.00';
+        psel.innerHTML += '<option value="'+i+'">'+p.name+' — $'+price+'</option>';
+      });
+    }
+  }catch(e){}
+}
+
+function closeInvModal(){
+  document.getElementById('inv-modal').style.display='none';
+  _invLines=[];
+  var n=document.getElementById('inv-number'); if(n) n.value='';
+  var cl=document.getElementById('inv-client'); if(cl) cl.value='';
+  var ci=document.getElementById('inv-client-info'); if(ci) ci.innerHTML='';
+  renderInvLines();
+}
+
+function updateInvClientInfo(){
+  var sel = document.getElementById('inv-client');
+  var id = sel ? sel.value : '';
+  var client = _invClients.find(function(c){return c.id===id;});
+  var el = document.getElementById('inv-client-info');
+  if(!el) return;
+  if(!client){ el.innerHTML=''; return; }
+  el.innerHTML = (client.company_name?'<strong>'+client.company_name+'</strong><br>':'')+
+    (client.contact_name?client.contact_name+'<br>':'')+
+    (client.email?'<span style="color:#65A30D">'+client.email+'</span>':'');
+}
+
+function addEmptyLine(){
+  _invLines.push({description:'',qty:1,unit_price:0});
+  renderInvLines();
+}
+
+function addLineFromCatalog(){
+  var sel = document.getElementById('inv-product-select');
+  if(!sel) return;
+  var idx = parseInt(sel.value);
+  if(isNaN(idx)||!_invProducts[idx]) return;
+  var p = _invProducts[idx];
+  var price = p.prices&&p.prices[0] ? p.prices[0].unit_amount/100 : 0;
+  _invLines.push({description:p.name,qty:1,unit_price:price});
+  sel.value='';
+  renderInvLines();
+}
+
+function removeInvLine(i){
+  _invLines.splice(i,1);
+  renderInvLines();
+}
+
+function updateLine(i,field,val){
+  _invLines[i][field] = field==='description' ? val : parseFloat(val)||0;
+  updateInvTotal();
+}
+
+function renderInvLines(){
+  var tbody = document.getElementById('inv-lines-body');
+  if(!tbody) return;
+  if(!_invLines.length){
+    tbody.innerHTML = '<tr><td colspan="5" style="padding:20px;text-align:center;color:#9ca3af;font-size:.875rem">No lines yet. Click &laquo;+ Add Line&raquo; or pick from catalog.</td></tr>';
+    updateInvTotal();
+    return;
+  }
+  var html = '';
+  _invLines.forEach(function(ln,i){
+    var sub = (ln.qty*ln.unit_price).toFixed(2);
+    html += '<tr style="border-bottom:1px solid #f3f4f6"><td style="padding:8px 4px"><input value="'+ln.description.replace(/"/g,'&quot;')+'" oninput="updateLine('+i+','description',this.value)" placeholder="Description" style="width:100%;border:1px solid #e7eded;border-radius:6px;padding:6px 8px;font-size:.8rem;box-sizing:border-box"></td><td style="padding:8px;text-align:right"><input type="number" min="1" value="'+ln.qty+'" oninput="updateLine('+i+','qty',this.value)" style="width:56px;border:1px solid #e7eded;border-radius:6px;padding:6px;font-size:.8rem;text-align:right"></td><td style="padding:8px;text-align:right"><input type="number" min="0" step="0.01" value="'+ln.unit_price.toFixed(2)+'" oninput="updateLine('+i+','unit_price',this.value)" style="width:100px;border:1px solid #e7eded;border-radius:6px;padding:6px;font-size:.8rem;text-align:right"></td><td style="padding:8px;text-align:right;font-size:.875rem;font-weight:600;color:#1c2225">$'+sub+'</td><td style="padding:8px;text-align:center"><button onclick="removeInvLine('+i+')" style="background:none;border:none;color:#ef4444;cursor:pointer;font-size:1.1rem;line-height:1">×</button></td></tr>';
+  });
+  tbody.innerHTML = html;
+  updateInvTotal();
+}
+
+function updateInvTotal(){
+  var total = _invLines.reduce(function(s,ln){return s + (ln.qty||0)*(ln.unit_price||0);},0);
+  var el = document.getElementById('inv-total-display');
+  if(el) el.textContent = '$'+total.toFixed(2);
+}
+
+async function saveInvoice(){
+  var clientId = (document.getElementById('inv-client')||{}).value;
+  if(!clientId){ alert('Please select a client'); return; }
+  if(!_invLines.length){ alert('Please add at least one line item'); return; }
+  var total = _invLines.reduce(function(s,ln){return s + (ln.qty||0)*(ln.unit_price||0);},0);
+  var body = {
+    client_id: clientId,
+    number: (document.getElementById('inv-number')||{}).value || null,
+    amount: total,
+    status: 'unpaid',
+    issued_at: (document.getElementById('inv-issued')||{}).value || null,
+    due_date: (document.getElementById('inv-due')||{}).value || null,
+  };
+  try{
+    var r = await fetch('/api/invoices',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+    var j = await r.json();
+    if(j.error) throw new Error(j.error);
+    closeInvModal();
+    await loadInvoices();
+  }catch(e){ alert('Error saving invoice: '+e.message); }
+}
+
+// ── Page init map ─────────────────────────────────────────────────────────────────────────
+var pageInits = {
+  'Tickets': loadTickets,
+  'Invoices & Payments': loadInvoices,
+};
+
 // ── Auto-run on page load (no login required for admin) ──────────────────────
 try{
   document.querySelectorAll('[data-count]').forEach(countUp);

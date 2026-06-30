@@ -1,7 +1,7 @@
 import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 import RawPage from '@/components/RawPage';
-import { markup, script } from '@/content/admin';
+import { markup, script } from '@/admin';
 
 export const dynamic = 'force-dynamic';
 
