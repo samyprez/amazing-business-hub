@@ -1,16 +1,14 @@
-﻿// app/api/invoices/route.ts
+﻿// app/api/leads/route.ts
 //
-// API de Facturas (registro). Corre server-side con la sesion del usuario.
-//  GET   -> lista facturas (con datos del cliente)
-//  POST  -> crea una factura  { client_id?, description?, amount*, currency? }
-//  PATCH -> cambia estado manual  { id*, status }  (borrador/enviada/pagada/cancelada)
-//
-// El cobro online con Stripe vive en /api/invoices/stripe (se activa con llaves).
+// API de Leads. Corre server-side con la sesion del usuario (RLS aplica).
+//  GET   -> lista todos los leads
+//  POST  -> crea un lead  { name*, company?, email?, phone?, source?, notes? }
+//  PATCH -> actualiza estado  { id*, status }
 
 import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 
-const STATUSES = ['borrador', 'enviada', 'pagada', 'cancelada'];
+const STATUSES = ['nuevo', 'contactado', 'calificado', 'propuesta', 'ganado', 'perdido'];
 
 async function requireStaff() {
   const supabase = await createClient();
@@ -33,12 +31,12 @@ export async function GET() {
   }
 
   const { data, error } = await gate.supabase
-    .from('invoices')
-    .select('id, description, amount, currency, status, hosted_invoice_url, created_at, client_id, clients(company_name, email)')
+    .from('leads')
+    .select('id, name, company, email, phone, source, status, notes, created_at')
     .order('created_at', { ascending: false });
 
   if (error) return NextResponse.json({ error: error.message }, { status: 400 });
-  return NextResponse.json({ invoices: data ?? [] }, { status: 200 });
+  return NextResponse.json({ leads: data ?? [] }, { status: 200 });
 }
 
 export async function POST(request: Request) {
@@ -48,10 +46,12 @@ export async function POST(request: Request) {
   }
 
   let body: {
-    client_id?: string | null;
-    description?: string | null;
-    amount?: number | string;
-    currency?: string;
+    name?: string;
+    company?: string | null;
+    email?: string | null;
+    phone?: string | null;
+    source?: string | null;
+    notes?: string | null;
   };
   try {
     body = await request.json();
@@ -59,26 +59,29 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Cuerpo invalido.' }, { status: 400 });
   }
 
-  const amount = Number(body.amount);
-  if (!Number.isFinite(amount) || amount <= 0) {
-    return NextResponse.json({ error: 'El monto debe ser un número mayor a 0.' }, { status: 400 });
+  const name = (body.name || '').trim();
+  if (!name) {
+    return NextResponse.json({ error: 'El nombre es obligatorio.' }, { status: 400 });
   }
-  const currency = (body.currency || 'usd').toString().trim().toLowerCase() || 'usd';
+
+  const clean = (v: string | null | undefined) => (v || '').toString().trim() || null;
 
   const { data, error } = await gate.supabase
-    .from('invoices')
+    .from('leads')
     .insert({
-      client_id: body.client_id || null,
-      description: (body.description || '').toString().trim() || null,
-      amount,
-      currency,
-      status: 'borrador',
+      name,
+      company: clean(body.company),
+      email: clean(body.email),
+      phone: clean(body.phone),
+      source: clean(body.source),
+      notes: clean(body.notes),
+      status: 'nuevo',
     })
-    .select('id, description, amount, currency, status, hosted_invoice_url, created_at, client_id, clients(company_name, email)')
+    .select('id, name, company, email, phone, source, status, notes, created_at')
     .single();
 
   if (error) return NextResponse.json({ error: error.message }, { status: 400 });
-  return NextResponse.json({ invoice: data }, { status: 201 });
+  return NextResponse.json({ lead: data }, { status: 201 });
 }
 
 export async function PATCH(request: Request) {
@@ -94,18 +97,20 @@ export async function PATCH(request: Request) {
     return NextResponse.json({ error: 'Cuerpo invalido.' }, { status: 400 });
   }
 
-  if (!body.id) return NextResponse.json({ error: 'Falta el id.' }, { status: 400 });
+  if (!body.id) {
+    return NextResponse.json({ error: 'Falta el id del lead.' }, { status: 400 });
+  }
   if (!body.status || !STATUSES.includes(body.status)) {
     return NextResponse.json({ error: 'Estado invalido.' }, { status: 400 });
   }
 
   const { data, error } = await gate.supabase
-    .from('invoices')
+    .from('leads')
     .update({ status: body.status })
     .eq('id', body.id)
     .select('id, status')
     .single();
 
   if (error) return NextResponse.json({ error: error.message }, { status: 400 });
-  return NextResponse.json({ invoice: data }, { status: 200 });
+  return NextResponse.json({ lead: data }, { status: 200 });
 }
