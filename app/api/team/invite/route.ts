@@ -15,9 +15,11 @@ export async function POST(req: Request) {
 
   const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL || supabaseUrl?.replace('supabase.co', 'vercel.app');
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL;
   if (!serviceKey || !supabaseUrl)
     return NextResponse.json({ error: 'SUPABASE_SERVICE_ROLE_KEY not configured in Vercel env vars' }, { status: 500 });
+  if (!appUrl)
+    return NextResponse.json({ error: 'NEXT_PUBLIC_APP_URL not configured in Vercel env vars (e.g. https://amazing-business-hub.vercel.app)' }, { status: 500 });
 
   const admin = createAdmin(supabaseUrl, serviceKey, { auth: { autoRefreshToken: false, persistSession: false } });
 
