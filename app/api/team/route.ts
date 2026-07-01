@@ -12,7 +12,7 @@ export async function GET() {
 
   const { data, error } = await supabase
     .from('profiles')
-    .select('id, full_name, role, avatar_url, created_at, position')
+    .select('id, full_name, role, avatar_url, created_at')
     .in('role', ['super_admin', 'admin', 'staff'])
     .order('created_at', { ascending: true });
 
