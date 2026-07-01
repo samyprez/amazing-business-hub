@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 
 const C = { teal: '#10BEB2', ink: '#222A2E', sub: '#697479', line: '#e7eded' };
 
-const CALENDAR_ID = process.env.NEXT_PUBLIC_GOOGLE_CALENDAR_ID ?? '';
+const CALENDAR_ID = process.env.NEXT_PUBLIC_GOOGLE_CALENDAR_ID ?? 'samyprez@gmail.com';
 
 export default function CalendarModal() {
   const [open, setOpen] = useState(false);
