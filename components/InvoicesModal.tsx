@@ -56,100 +56,147 @@ function printInvoice(inv: Invoice, lines: LineItem[], currency: Currency) {
   const subtotal = lines.length > 0
     ? lines.reduce((s, ln) => s + ln.qty * ln.unit_price, 0)
     : Number(inv.amount);
-  const taxAmt = subtotal * TAX_RATE[currency];
+  const taxAmt  = subtotal * TAX_RATE[currency];
   const total   = subtotal + taxAmt;
+
   const linesHtml = lines.length > 0
     ? lines.map((ln) => `
         <tr>
-          <td style="padding:9px 0;border-bottom:1px solid #e7eded;">${ln.description || '—'}</td>
-          <td style="padding:9px 0;border-bottom:1px solid #e7eded;text-align:right;">${ln.qty}</td>
-          <td style="padding:9px 0;border-bottom:1px solid #e7eded;text-align:right;">${money(ln.unit_price, currency)}</td>
-          <td style="padding:9px 0;border-bottom:1px solid #e7eded;text-align:right;font-weight:700;">${money(ln.qty * ln.unit_price, currency)}</td>
+          <td style="padding:10px 8px;border-bottom:1px solid #e7eded;vertical-align:top">
+            <div style="font-weight:700;font-size:13px">${ln.description || '—'}</div>
+          </td>
+          <td style="padding:10px 8px;border-bottom:1px solid #e7eded;text-align:center">${ln.qty}</td>
+          <td style="padding:10px 8px;border-bottom:1px solid #e7eded;text-align:right">${money(ln.unit_price, currency)}</td>
+          <td style="padding:10px 8px;border-bottom:1px solid #e7eded;text-align:right;font-weight:700">${money(ln.qty * ln.unit_price, currency)}</td>
         </tr>`).join('')
-    : `<tr><td colspan="4" style="padding:9px 0;border-bottom:1px solid #e7eded;color:#697479;">Services rendered</td></tr>`;
+    : `<tr><td colspan="4" style="padding:10px 8px;border-bottom:1px solid #e7eded;color:#697479">Services rendered</td></tr>`;
 
-  const w = window.open('', '_blank', 'width=900,height=700');
+  const origin = typeof window !== 'undefined' ? window.location.origin : '';
+  const w = window.open('', '_blank', 'width=860,height=1100');
   if (!w) return;
   w.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8">
   <title>Invoice ${inv.number || inv.id.slice(0, 8)}</title>
   <style>
     *{margin:0;padding:0;box-sizing:border-box}
-    body{font-family:'Segoe UI',Arial,sans-serif;color:#222A2E;background:#fff;padding:48px 56px;font-size:13.5px;line-height:1.5}
-    @media print{body{padding:32px 40px}}
-    h1{font-size:28px;font-weight:900;letter-spacing:-.02em}
-    .row{display:flex;justify-content:space-between;align-items:flex-start}
-    table{width:100%;border-collapse:collapse;margin-top:24px}
-    th{text-align:left;font-size:10.5px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:#697479;padding:8px 0;border-bottom:2px solid #222A2E}
-    th:not(:first-child){text-align:right}
-    .tot-row td{padding:7px 0;font-size:14px}
-    .tot-row.grand td{font-size:18px;font-weight:900;padding-top:12px;border-top:2px solid #222A2E}
-    .status{display:inline-block;padding:4px 12px;border-radius:999px;font-size:11.5px;font-weight:700;background:#fff4e0;color:#c98a14}
-    .status.paid{background:#e7f7ee;color:#1a9f5e}
-    .status.overdue{background:#fdecec;color:#d2603a}
-    .footer{margin-top:40px;padding-top:18px;border-top:1px solid #e7eded;font-size:11px;color:#697479;line-height:1.65}
-    .pay-methods{margin-top:14px;background:#eafaf7;color:#0E9E95;padding:10px 14px;border-radius:8px;font-size:11.5px;font-weight:700}
-    .logo{width:44px;height:44px;object-fit:contain}
+    body{font-family:'Segoe UI',Arial,sans-serif;color:#1a1a1a;background:#fff;padding:44px 52px;font-size:13px;line-height:1.5}
+    @media print{body{padding:28px 36px}@page{margin:0}}
+    .top-row{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:28px}
+    .company-name{font-size:13px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;color:#1a1a1a}
+    .company-sub{font-size:11.5px;color:#555;margin-top:3px;line-height:1.6}
+    .inv-title{font-size:38px;font-weight:900;letter-spacing:-.02em;color:#1a1a1a;text-align:right}
+    .bill-row{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:24px;gap:24px}
+    .bill-to{flex:1}
+    .bill-label{font-size:10px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:#888;margin-bottom:6px}
+    .bill-name{font-size:14px;font-weight:800}
+    .bill-info{font-size:12px;color:#555;margin-top:2px}
+    .inv-details{min-width:260px}
+    .det-table{width:100%;border-collapse:collapse}
+    .det-table td{padding:4px 0;font-size:12px}
+    .det-table td:first-child{color:#555;padding-right:16px}
+    .det-table td:last-child{text-align:right;font-weight:600}
+    table.items{width:100%;border-collapse:collapse;margin-bottom:0}
+    table.items thead tr{background:#c9a227;color:#fff}
+    table.items thead td{padding:9px 10px;font-size:11.5px;font-weight:700;text-transform:uppercase;letter-spacing:.04em}
+    table.items thead td:not(:first-child){text-align:center}
+    table.items thead td:last-child{text-align:right}
+    .tot-table{width:100%;border-collapse:collapse}
+    .tot-table td{padding:5px 0;font-size:13px}
+    .tot-table td:last-child{text-align:right;font-weight:600}
+    .tot-table tr.grand td{font-size:15px;font-weight:900;padding-top:10px;border-top:2px solid #1a1a1a}
+    .tot-table tr.grand td:first-child{color:#1a1a1a}
+    .footer-note{margin-top:28px;padding:12px 14px;background:#f9f9f9;border-radius:6px;font-size:11px;color:#555;line-height:1.7}
+    .footer-note strong{color:#1a1a1a}
+    .logo{width:80px;object-fit:contain}
+    .divider{border:none;border-top:1px solid #e0e0e0;margin:20px 0}
+    .amount-due-box{background:#1a1a1a;color:#fff;padding:10px 16px;border-radius:6px;display:flex;justify-content:space-between;align-items:center;margin-top:10px}
+    .amount-due-box span:first-child{font-size:13px;font-weight:700}
+    .amount-due-box span:last-child{font-size:18px;font-weight:900}
   </style>
   </head><body>
-  <div class="row" style="margin-bottom:36px">
+
+  <!-- Header -->
+  <div class="top-row">
     <div>
-      <div style="display:flex;align-items:center;gap:12px;margin-bottom:10px">
-        <img class="logo" src="${window.location.origin}/mark-teal.png" alt="Logo" />
-        <div>
-          <div style="font-size:15px;font-weight:800;color:#222A2E">Amazing Business Hub</div>
-          <div style="color:#697479;font-size:12px">admin@amazingbusinesshub.com</div>
+      <img class="logo" src="${origin}/mark-teal.png" alt="Amazing Solutions Logo" onerror="this.style.display='none'" />
+      <div style="margin-top:10px">
+        <div class="company-name">Amazing Solutions Canada</div>
+        <div class="company-sub">
+          21 Rubydale Gardens<br>
+          HST/GST # 753961143RT0001<br>
+          Toronto, Ontario M9L1B8, Canada<br>
+          6474692835 · www.amazingsolutions.ca
         </div>
       </div>
     </div>
     <div style="text-align:right">
-      <h1>INVOICE</h1>
-      <div style="margin-top:8px;font-size:13px;color:#697479">
-        ${inv.number ? `<div style="font-weight:700;font-size:15px">#${inv.number}</div>` : ''}
-        <div>Issued: <b>${fmt(inv.issued_at)}</b></div>
-        ${inv.due_date ? `<div>Due: <b style="color:#d2603a">${fmt(inv.due_date)}</b></div>` : ''}
-        <div style="margin-top:8px"><span class="status ${inv.status}">${STATUS_LABEL[inv.status]}</span></div>
-      </div>
+      <div class="inv-title">INVOICE</div>
     </div>
   </div>
 
-  ${client ? `
-  <div style="margin-bottom:28px;padding:14px 16px;background:#f7fee7;border-radius:10px;border:1px solid #d9f99d">
-    <div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:#65A30D;margin-bottom:6px">Bill To</div>
-    <div style="font-weight:800;font-size:14px">${client.company_name}</div>
-    ${client.email ? `<div style="color:#697479;font-size:12px">${client.email}</div>` : ''}
-  </div>` : ''}
+  <hr class="divider">
 
-  <table>
-    <thead><tr>
-      <th style="width:55%">Description</th>
-      <th>Qty</th>
-      <th>Unit Price</th>
-      <th>Amount</th>
-    </tr></thead>
-    <tbody>${linesHtml}</tbody>
-  </table>
-
-  <div style="display:flex;justify-content:flex-end;margin-top:18px">
-    <div style="min-width:260px">
-      <table style="margin-top:0">
-        <tbody>
-          <tr class="tot-row"><td style="color:#697479">Subtotal</td><td style="text-align:right">${money(subtotal, currency)}</td></tr>
-          <tr class="tot-row"><td style="color:#697479">${TAX_LABEL[currency]}</td><td style="text-align:right">${money(taxAmt, currency)}</td></tr>
-          <tr class="tot-row grand"><td>Total Due</td><td style="text-align:right;color:#10BEB2">${money(total, currency)}</td></tr>
-        </tbody>
+  <!-- Bill To + Invoice Details -->
+  <div class="bill-row">
+    <div class="bill-to">
+      <div class="bill-label">Bill to</div>
+      ${client ? `
+        <div class="bill-name">${client.company_name}</div>
+        ${client.email ? `<div class="bill-info">${client.email}</div>` : ''}
+      ` : '<div class="bill-name">—</div>'}
+    </div>
+    <div class="inv-details">
+      <table class="det-table">
+        <tr><td>Invoice Number:</td><td>${inv.number ? `GI-${inv.number}` : '—'}</td></tr>
+        <tr><td>Invoice Date:</td><td>${fmt(inv.issued_at)}</td></tr>
+        <tr><td>Payment Date:</td><td>${inv.due_date ? fmt(inv.due_date) : '—'}</td></tr>
+        <tr><td>Amount Due (${currency}):</td><td style="color:#c9a227;font-weight:800">${money(total, currency)}</td></tr>
       </table>
     </div>
   </div>
 
-  <div class="footer">
-    <b>Terms &amp; Conditions</b><br>
-    By paying this invoice you agree to our terms and conditions. Please allow the previously discussed timeframe to complete your order.
-    Remain attentive to any communications sent by us, as we may require additional information to facilitate your request.
-    We respect your privacy — your contact information is never sold, rented, or shared with third parties.
-    All sales are final unless otherwise agreed in writing prior to commencement of work.
-    <div class="pay-methods">
-      ✓ We accept Visa · Mastercard · American Express · Debit or Credit Card
+  <!-- Items Table -->
+  <table class="items">
+    <thead>
+      <tr>
+        <td style="width:55%">Items</td>
+        <td style="width:10%;text-align:center">Quantity</td>
+        <td style="width:17%;text-align:right">Price</td>
+        <td style="width:18%;text-align:right">Amount</td>
+      </tr>
+    </thead>
+    <tbody>${linesHtml}</tbody>
+  </table>
+
+  <hr class="divider">
+
+  <!-- Totals -->
+  <div style="display:flex;justify-content:flex-end">
+    <div style="min-width:280px">
+      <table class="tot-table">
+        <tr><td style="color:#555">Subtotal:</td><td>${money(subtotal, currency)}</td></tr>
+        <tr><td style="color:#555">${TAX_LABEL[currency]}:</td><td>${money(taxAmt, currency)}</td></tr>
+        <tr><td style="color:#555">Total:</td><td>${money(total, currency)}</td></tr>
+      </table>
+      <div class="amount-due-box">
+        <span>Amount Due (${currency}):</span>
+        <span>${money(total, currency)}</span>
+      </div>
     </div>
+  </div>
+
+  <!-- Payment Methods -->
+  <div style="margin-top:24px;text-align:center">
+    <img src="https://static.vecteezy.com/system/resources/thumbnails/039/865/653/small/mastercard-visa-apple-pay-google-pay-popular-payment-systems-finance-system-app-bank-card-illustration-free-vector.jpg"
+      alt="Accepted payment methods" style="max-width:280px;height:auto;border-radius:8px" />
+  </div>
+
+  <!-- Notes / Terms -->
+  <div class="footer-note">
+    <strong>Notes / Terms</strong><br>
+    I/we acknowledge receipt of this job at my/our full satisfaction. The total charge for this job is due and payable upon
+    completion. *I/we are responsible for making sure there are no mistakes. In the event of payment not made on time,
+    the account is referred to a collection agency or an attorney and the Client will pay the cost of collection including all
+    attorneys and court fees.
   </div>
 
   <script>window.onload=()=>{window.print();}</script>

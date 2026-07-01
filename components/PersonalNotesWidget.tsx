@@ -48,14 +48,26 @@ export default function PersonalNotesWidget() {
   }
 
   async function add() {
-    if (!input.trim()) return;
-    const res = await fetch('/api/personal-notes', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ content: input.trim() }),
-    });
-    const d = await res.json() as { note?: Note };
-    if (d.note) { setNotes(prev => [d.note!, ...prev]); setInput(''); }
+    const text = input.trim();
+    if (!text) return;
+    // Optimistic update immediately
+    const tempId = `tmp-${Date.now()}`;
+    const tempNote: Note = { id: tempId, content: text, checked: false, position: 0 };
+    setNotes(prev => [tempNote, ...prev]);
+    setInput('');
+    try {
+      const res = await fetch('/api/personal-notes', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ content: text }),
+      });
+      const d = await res.json() as { note?: Note };
+      if (d.note) {
+        setNotes(prev => prev.map(n => n.id === tempId ? d.note! : n));
+      }
+    } catch {
+      setNotes(prev => prev.filter(n => n.id !== tempId));
+    }
   }
 
   async function toggle(note: Note) {

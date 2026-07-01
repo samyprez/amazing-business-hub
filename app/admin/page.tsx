@@ -20,6 +20,9 @@ import InvoicesModal from '@/components/InvoicesModal';
 import ServicesModal from '@/components/ServicesModal';
 import NotesModal from '@/components/NotesModal';
 import PersonalNotesWidget from '@/components/PersonalNotesWidget';
+import ProjectsModal from '@/components/ProjectsModal';
+import TeamModal from '@/components/TeamModal';
+import CalendarModal from '@/components/CalendarModal';
 import { markup, script } from '@/content/admin';
 import { getDashboardData } from '@/lib/queries/dashboard';
 import { renderAdminMarkup } from '@/lib/render/admin';
@@ -52,6 +55,9 @@ export default async function AdminPage() {
       <ServicesModal />
       <NotesModal />
       <PersonalNotesWidget />
+      <ProjectsModal />
+      <TeamModal />
+      <CalendarModal />
     </>
   );
 }

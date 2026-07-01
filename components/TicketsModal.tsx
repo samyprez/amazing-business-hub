@@ -95,7 +95,7 @@ export default function TicketsModal() {
     function findLink(): HTMLElement | null {
       const links = Array.from(document.querySelectorAll('.side a'));
       return (links.find(
-        (a) => (a.textContent || '').trim().toLowerCase() === 'tickets'
+        (a) => (a.textContent || '').replace(/\d+/g, '').trim().toLowerCase() === 'tickets'
       ) as HTMLElement) || null;
     }
     let bound: HTMLElement | null = null;

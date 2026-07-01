@@ -84,7 +84,7 @@ export default function LeadsModal() {
     function findLink(): HTMLElement | null {
       const links = Array.from(document.querySelectorAll('.side a'));
       return (links.find(
-        (a) => (a.textContent || '').trim().toLowerCase() === 'leads'
+        (a) => (a.textContent || '').replace(/\d+/g, '').trim().toLowerCase() === 'leads'
       ) as HTMLElement) || null;
     }
     let bound: HTMLElement | null = null;

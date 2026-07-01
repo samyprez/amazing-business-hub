@@ -1,9 +1,8 @@
 'use client';
 
 // components/NotesModal.tsx
-// Floating "Notes" button on the admin dashboard.
+// "Tareas" button in the top bar — hooks into #tareas-btn in admin.ts.
 // Displays a shared Google Doc (read-only) fetched via /api/notes.
-// To configure: add GOOGLE_DOCS_API_KEY and GOOGLE_DOC_ID to Vercel env vars.
 
 import { useEffect, useState } from 'react';
 
@@ -20,6 +19,20 @@ export default function NotesModal() {
   const [note, setNote]       = useState<NoteData | null>(null);
   const [lastFetch, setLastFetch] = useState<Date | null>(null);
 
+  // Hook into the #tareas-btn button injected in admin.ts top bar
+  useEffect(() => {
+    function attach() {
+      const btn = document.getElementById('tareas-btn');
+      if (!btn) return false;
+      btn.addEventListener('click', () => setOpen(true));
+      return true;
+    }
+    if (attach()) return;
+    const obs = new MutationObserver(() => { if (attach()) obs.disconnect(); });
+    obs.observe(document.body, { childList: true, subtree: true });
+    return () => obs.disconnect();
+  }, []);
+
   async function load() {
     setLoading(true);
     try {
@@ -34,29 +47,8 @@ export default function NotesModal() {
 
   useEffect(() => { if (open && !note) void load(); }, [open]);
 
-  const docUrl = typeof window !== 'undefined'
-    ? `https://docs.google.com/document/d/${process.env.NEXT_PUBLIC_GOOGLE_DOC_ID ?? ''}/edit`
-    : '#';
-
   return (
     <>
-      {/* ── Floating button ─────────────────────────────────────────────────── */}
-      <button
-        style={fab}
-        onClick={() => setOpen(true)}
-        aria-label="Abrir tareas del equipo"
-        title="Tareas"
-      >
-        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-          <polyline points="14 2 14 8 20 8"/>
-          <line x1="16" y1="13" x2="8" y2="13"/>
-          <line x1="16" y1="17" x2="8" y2="17"/>
-          <polyline points="10 9 9 9 8 9"/>
-        </svg>
-        <span style={{ fontSize: 12, fontWeight: 800, letterSpacing: '.01em' }}>Tareas</span>
-      </button>
-
       {/* ── Modal ───────────────────────────────────────────────────────────── */}
       {open && (
         <div style={overlay} onClick={() => setOpen(false)}>
@@ -89,7 +81,7 @@ export default function NotesModal() {
                   </svg>
                 </button>
                 {note?.configured && !note?.error && (
-                  <a href={`https://docs.google.com/document/d/${process.env.NEXT_PUBLIC_GOOGLE_DOC_ID ?? ''}/edit`} target="_blank" rel="noopener noreferrer" style={openBtn}>
+                  <a href="https://docs.google.com/document/d/113p0XXhl-UjebF7is-NM4fPJMuYc6u1YbXI-L5KQ1Uc/edit" target="_blank" rel="noopener noreferrer" style={openBtn}>
                     Open in Google Docs ↗
                   </a>
                 )}
@@ -108,30 +100,24 @@ export default function NotesModal() {
               {!loading && note && !note.configured && (
                 <div style={setupBox}>
                   <div style={{ fontSize: 15, fontWeight: 800, marginBottom: 12 }}>Connect a Google Doc</div>
-                  <p style={{ lineHeight: 1.65, marginBottom: 16 }}>To display a shared note, add these two environment variables in <b>Vercel → Settings → Environment Variables</b> and redeploy:</p>
+                  <p style={{ lineHeight: 1.65, marginBottom: 16 }}>Add these two environment variables in <b>Vercel → Settings → Environment Variables</b> and redeploy:</p>
                   <div style={codeBlock}>
                     <div><span style={{ color: C.tealDeep }}>GOOGLE_DOCS_API_KEY</span> = <span style={{ color: C.warn }}>your-api-key</span></div>
                     <div style={{ marginTop: 6 }}><span style={{ color: C.tealDeep }}>GOOGLE_DOC_ID</span> = <span style={{ color: C.warn }}>the-doc-id-from-the-url</span></div>
                   </div>
-                  <p style={{ lineHeight: 1.7, fontSize: 13, marginTop: 16 }}>
-                    <b>How to get the Doc ID:</b> open the Google Doc — the ID is the long string in the URL between <code>/d/</code> and <code>/edit</code>.<br /><br />
-                    <b>How to get an API key:</b> Google Cloud Console → Enable &quot;Google Docs API&quot; → Credentials → Create API Key.<br /><br />
-                    <b>Share the doc:</b> click Share → Anyone with the link → Viewer.
-                  </p>
                 </div>
               )}
 
               {!loading && note?.configured && note.error && (
                 <div style={{ background: '#fdecec', color: C.bad, padding: '14px 16px', borderRadius: 10, fontSize: 13, fontWeight: 600, lineHeight: 1.5 }}>
-                  <strong>Error fetching document:</strong><br />{note.error}<br /><br />
-                  Make sure the document is shared as &ldquo;Anyone with the link can view&rdquo; and the API key has the Google Docs API enabled.
+                  <strong>Error:</strong> {note.error}
                 </div>
               )}
 
               {!loading && note?.configured && !note.error && note.html && (
                 <div
                   style={{ lineHeight: 1.7, fontSize: 14.5, color: C.ink }}
-                  // biome-ignore lint/security/noDangerouslySetInnerHtml: content comes from our own Google Doc
+                  // biome-ignore lint/security/noDangerouslySetInnerHtml: content from own Google Doc
                   dangerouslySetInnerHTML={{ __html: note.html }}
                 />
               )}
@@ -143,17 +129,7 @@ export default function NotesModal() {
   );
 }
 
-// ── Styles ─────────────────────────────────────────────────────────────────────
-const fab: React.CSSProperties = {
-  position: 'fixed', bottom: 28, right: 28, zIndex: 8888,
-  display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4,
-  width: 64, height: 64, borderRadius: 18,
-  background: C.teal, color: '#fff', border: 'none', cursor: 'pointer',
-  boxShadow: '0 6px 24px rgba(16,190,178,0.45)',
-  fontFamily: "'Manrope', sans-serif",
-  transition: 'transform .15s, box-shadow .15s',
-};
-
+// ── Styles ──────────────────────────────────────────────────────────────────────
 const overlay: React.CSSProperties = {
   position: 'fixed', inset: 0, background: 'rgba(20,24,27,0.5)', backdropFilter: 'blur(2px)',
   display: 'flex', alignItems: 'flex-start', justifyContent: 'center',
