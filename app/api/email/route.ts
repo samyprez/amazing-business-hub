@@ -25,7 +25,8 @@ export async function POST(req: Request) {
   if (!apiKey)
     return NextResponse.json({ error: 'RESEND_API_KEY not configured in Vercel env vars.' }, { status: 500 });
 
-  const from = process.env.EMAIL_FROM || 'Amazing Solutions <info@amazingsolutions.ca>';
+  // Use verified domain from env, or Resend's free test sender while domain is unverified
+  const from = process.env.EMAIL_FROM || 'Amazing Solutions <onboarding@resend.dev>';
 
   const res = await fetch('https://api.resend.com/emails', {
     method: 'POST',

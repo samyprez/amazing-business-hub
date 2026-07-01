@@ -3,7 +3,6 @@ import { createClient } from '@/lib/supabase/server';
 import { createClient as createAdmin } from '@supabase/supabase-js';
 
 export async function POST(req: Request) {
-  // Only admins can invite
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -16,6 +15,7 @@ export async function POST(req: Request) {
 
   const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL || supabaseUrl?.replace('supabase.co', 'vercel.app');
   if (!serviceKey || !supabaseUrl)
     return NextResponse.json({ error: 'SUPABASE_SERVICE_ROLE_KEY not configured in Vercel env vars' }, { status: 500 });
 
@@ -23,11 +23,11 @@ export async function POST(req: Request) {
 
   const { data, error } = await admin.auth.admin.inviteUserByEmail(body.email.trim(), {
     data: { full_name: body.full_name || '', role: body.role || 'staff' },
+    redirectTo: `${appUrl}/auth/callback?next=/setup-profile`,
   });
 
   if (error) return NextResponse.json({ error: error.message }, { status: 400 });
 
-  // Pre-fill profile if it exists
   if (data.user) {
     await admin.from('profiles').upsert({
       id: data.user.id,
