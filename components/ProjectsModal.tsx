@@ -61,6 +61,7 @@ export default function ProjectsModal() {
   const [fDate, setFDate] = useState('');
   const [fStatus, setFStatus] = useState<Status>('collecting');
   const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   // Link form
   const [lTitle, setLTitle] = useState('');
@@ -90,15 +91,19 @@ export default function ProjectsModal() {
 
   async function load() {
     setLoading(true);
+    setError(null);
     try {
       const [pRes, cRes] = await Promise.all([
         fetch('/api/projects'),
         fetch('/api/clients'),
       ]);
-      const pData = await pRes.json() as { projects?: Project[] };
+      const pData = await pRes.json() as { projects?: Project[]; error?: string };
       const cData = await cRes.json() as { clients?: ClientOption[] };
+      if (pData.error) { setError(pData.error); return; }
       setProjects(pData.projects ?? []);
       setClients(cData.clients ?? []);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Error loading projects');
     } finally { setLoading(false); }
   }
 
@@ -107,14 +112,22 @@ export default function ProjectsModal() {
   async function createProject() {
     if (!fName.trim()) return;
     setSaving(true);
+    setError(null);
     try {
       const res = await fetch('/api/projects', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name: fName.trim(), client_id: fClient || null, completion_date: fDate || null, status: fStatus }),
       });
-      const d = await res.json() as { project?: Project };
-      if (d.project) { setProjects(prev => [d.project!, ...prev]); setView('list'); setFName(''); setFClient(''); setFDate(''); setFStatus('collecting'); }
+      const d = await res.json() as { project?: Project; error?: string };
+      if (d.error) { setError(d.error); return; }
+      if (d.project) {
+        setProjects(prev => [d.project!, ...prev]);
+        setView('list');
+        setFName(''); setFClient(''); setFDate(''); setFStatus('collecting');
+      }
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Error creating project');
     } finally { setSaving(false); }
   }
 
@@ -190,8 +203,18 @@ export default function ProjectsModal() {
           {/* LIST VIEW */}
           {view === 'list' && (
             <>
+              {error && (
+                <div style={{ background: '#fdecec', color: '#d2603a', padding: '12px 16px', borderRadius: 10, marginBottom: 14, fontSize: 13, fontWeight: 600 }}>
+                  ⚠️ {error}
+                  {error.includes('relation') || error.includes('column') || error.includes('schema') ? (
+                    <div style={{ marginTop: 8, fontWeight: 400, fontSize: 12 }}>
+                      Run the projects SQL migration in Supabase → SQL Editor first.
+                    </div>
+                  ) : null}
+                </div>
+              )}
               {loading && <div style={emptyMsg}>Loading projects…</div>}
-              {!loading && projects.length === 0 && (
+              {!loading && !error && projects.length === 0 && (
                 <div style={emptyMsg}>No projects yet. Click &ldquo;+ New Project&rdquo; to create one.</div>
               )}
               {!loading && projects.length > 0 && (
@@ -236,6 +259,7 @@ export default function ProjectsModal() {
           {/* CREATE VIEW */}
           {view === 'create' && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+            {error && <div style={{ background: '#fdecec', color: '#d2603a', padding: '10px 14px', borderRadius: 10, fontSize: 13, fontWeight: 600 }}>⚠️ {error}</div>}
               <div style={fieldRow}>
                 <label style={label}>Project Name *</label>
                 <input style={input} value={fName} onChange={e => setFName(e.target.value)} placeholder="e.g. Website Redesign" />
