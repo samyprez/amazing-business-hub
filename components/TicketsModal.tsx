@@ -81,6 +81,7 @@ export default function TicketsModal() {
   const [error, setError] = useState<string | null>(null);
   const [showForm, setShowForm] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [selected, setSelected] = useState<Ticket | null>(null);
 
   // Form
   const [subject, setSubject] = useState('');
@@ -201,6 +202,7 @@ export default function TicketsModal() {
   const openCount = tickets.filter((t) => t.status !== 'closed').length;
 
   return (
+    <>
     <div style={overlay} onClick={() => setOpen(false)}>
       <div style={panel} onClick={(e) => e.stopPropagation()}>
         <div style={head}>
@@ -283,12 +285,16 @@ export default function TicketsModal() {
                   <tr><td style={td} colSpan={5}>Cargando tickets…</td></tr>
                 ) : (
                   tickets.map((t) => (
-                    <tr key={t.id}>
+                    <tr
+                      key={t.id}
+                      style={{ cursor: 'pointer' }}
+                      onClick={() => setSelected(t)}
+                    >
                       <td style={{ ...td, fontWeight: 700, whiteSpace: 'normal', maxWidth: 260 }}>{t.subject}</td>
                       <td style={td}>{t.clients?.company_name || '—'}</td>
                       <td style={td}><span style={priorityStyle(t.priority)}>{PRIORITY_LABEL[t.priority]}</span></td>
                       <td style={{ ...td, color: C.sub }}>{fmtDate(t.created_at)}</td>
-                      <td style={td}>
+                      <td style={td} onClick={e => e.stopPropagation()}>
                         <select
                           style={{ ...statusStyle(t.status), border: 'none', cursor: 'pointer', appearance: 'none', paddingRight: 22 }}
                           value={t.status}
@@ -308,6 +314,52 @@ export default function TicketsModal() {
         )}
       </div>
     </div>
+
+    {/* ── Ticket Detail Drawer ─────────────────────────────────────────────── */}
+    {selected && (
+      <div style={drawerOverlay} onClick={() => setSelected(null)}>
+        <div style={drawer} onClick={e => e.stopPropagation()}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 20 }}>
+            <div>
+              <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: '.08em', textTransform: 'uppercase', color: C.sub, marginBottom: 6 }}>Ticket Detail</div>
+              <h3 style={{ fontSize: 18, fontWeight: 800, lineHeight: 1.3 }}>{selected.subject}</h3>
+            </div>
+            <button style={x} onClick={() => setSelected(null)}>×</button>
+          </div>
+
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 20 }}>
+            <span style={priorityStyle(selected.priority)}>{PRIORITY_LABEL[selected.priority]}</span>
+            <span style={statusStyle(selected.status)}>{STATUS_LABEL[selected.status]}</span>
+            {selected.clients && <span style={{ ...badgeBase, background: C.mist, color: C.tealDeep }}>{selected.clients.company_name}</span>}
+          </div>
+
+          {selected.description && (
+            <div style={{ background: '#f4f7f7', borderRadius: 10, padding: '12px 14px', fontSize: 13.5, lineHeight: 1.7, color: C.ink, marginBottom: 20 }}>
+              {selected.description}
+            </div>
+          )}
+
+          <div style={{ fontSize: 12, color: C.sub, marginBottom: 20 }}>Created: {fmtDate(selected.created_at)}</div>
+
+          <div style={{ marginBottom: 8, fontSize: 12.5, fontWeight: 700 }}>Change Status:</div>
+          <div style={{ display: 'flex', gap: 8 }}>
+            {(Object.keys(STATUS_LABEL) as Ticket['status'][]).map(s => (
+              <button
+                key={s}
+                onClick={() => { changeStatus(selected.id, s); setSelected({ ...selected, status: s }); }}
+                style={{
+                  ...statusStyle(s), border: 'none', cursor: 'pointer',
+                  opacity: selected.status === s ? 1 : 0.45,
+                  transform: selected.status === s ? 'scale(1.05)' : 'scale(1)',
+                  transition: 'all .15s',
+                }}
+              >{STATUS_LABEL[s]}</button>
+            ))}
+          </div>
+        </div>
+      </div>
+    )}
+  </>
   );
 }
 
@@ -366,6 +418,18 @@ const th: React.CSSProperties = {
   textAlign: 'left', fontSize: 11, fontWeight: 800, color: C.sub, textTransform: 'uppercase',
   letterSpacing: '.04em', padding: '12px 12px', position: 'sticky', top: 0, background: '#fff',
   borderBottom: `1px solid ${C.line}`, whiteSpace: 'nowrap',
+};
+
+const drawerOverlay: React.CSSProperties = {
+  position: 'fixed', inset: 0, background: 'rgba(20,24,27,0.35)',
+  display: 'flex', alignItems: 'center', justifyContent: 'flex-end',
+  zIndex: 10000,
+};
+
+const drawer: React.CSSProperties = {
+  width: 420, height: '100vh', background: '#fff', padding: '32px 28px',
+  boxShadow: '-20px 0 60px rgba(0,0,0,0.2)', fontFamily: "'Manrope', sans-serif",
+  color: C.ink, overflowY: 'auto', display: 'flex', flexDirection: 'column',
 };
 
 const td: React.CSSProperties = {
