@@ -65,7 +65,7 @@ export default function NotesModal() {
                     <line x1="16" y1="17" x2="8" y2="17"/>
                   </svg>
                   <h3 style={{ fontSize: 18, fontWeight: 800, letterSpacing: '-0.01em' }}>
-                    {loading ? 'Loading…' : (note?.title || 'Tareas')}
+                    {loading ? 'Loading…' : (note?.title || '⚠️ To Do Today')}
                   </h3>
                 </div>
                 {lastFetch && (
