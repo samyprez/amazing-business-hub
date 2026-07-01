@@ -140,10 +140,10 @@
   font-weight: 700;
 }
 
-.badge-collecting { background: #fff4e0; color: #c98a14; }
-.badge-processing { background: #e8f0fe; color: #1a73e8; }
-.badge-finishing  { background: #eafaf7; color: #0E9E95; }
-.badge-done       { background: #e7f7ee; color: #1a9f5e; }
+.badge-not-started { background: #f0f2f2; color: #697479; }
+.badge-in-progress { background: #e8f0fe; color: #1a73e8; }
+.badge-review      { background: #fff4e0; color: #c98a14; }
+.badge-done        { background: #e7f7ee; color: #1a9f5e; }
 
 /* ── Urgency ── */
 .urgent { color: #d2603a; font-weight: 700; }

@@ -7,7 +7,7 @@ const C = {
   line: '#e7eded', bad: '#d2603a', good: '#1a9f5e', warn: '#c98a14', mist: '#eafaf7',
 };
 
-type Status = 'collecting' | 'processing' | 'finishing' | 'done';
+type Status = 'not_started' | 'in_progress' | 'review' | 'done';
 type ProjectLink = { id: string; title: string; url: string };
 type Project = {
   id: string; name: string; status: Status; completion_date: string | null;
@@ -18,16 +18,16 @@ type Project = {
 type ClientOption = { id: string; company_name: string };
 
 const STATUS_LABEL: Record<Status, string> = {
-  collecting: 'Collecting', processing: 'Processing', finishing: 'Finishing', done: 'Done',
+  not_started: 'Not Started', in_progress: 'In Progress', review: 'Review', done: 'Done',
 };
-const STATUSES: Status[] = ['collecting', 'processing', 'finishing', 'done'];
+const STATUSES: Status[] = ['not_started', 'in_progress', 'review', 'done'];
 
 function statusStyle(s: Status): React.CSSProperties {
   const m: Record<Status, { bg: string; color: string }> = {
-    collecting: { bg: '#fff4e0', color: C.warn },
-    processing: { bg: '#e8f0fe', color: '#1a73e8' },
-    finishing:  { bg: '#eafaf7', color: C.tealDeep },
-    done:       { bg: '#e7f7ee', color: C.good },
+    not_started: { bg: '#f0f2f2', color: C.sub },
+    in_progress: { bg: '#e8f0fe', color: '#1a73e8' },
+    review:      { bg: '#fff4e0', color: C.warn },
+    done:        { bg: '#e7f7ee', color: C.good },
   };
   return { ...badge, ...m[s] };
 }
@@ -59,7 +59,7 @@ export default function ProjectsModal() {
   const [fName, setFName] = useState('');
   const [fClient, setFClient] = useState('');
   const [fDate, setFDate] = useState('');
-  const [fStatus, setFStatus] = useState<Status>('collecting');
+  const [fStatus, setFStatus] = useState<Status>('not_started');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -124,7 +124,7 @@ export default function ProjectsModal() {
       if (d.project) {
         setProjects(prev => [d.project!, ...prev]);
         setView('list');
-        setFName(''); setFClient(''); setFDate(''); setFStatus('collecting');
+        setFName(''); setFClient(''); setFDate(''); setFStatus('not_started');
       }
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Error creating project');

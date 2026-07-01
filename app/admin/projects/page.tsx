@@ -7,7 +7,7 @@ import './projects.css';
 
 export const dynamic = 'force-dynamic';
 
-type Status = 'collecting' | 'processing' | 'finishing' | 'done';
+type Status = 'not_started' | 'in_progress' | 'review' | 'done';
 
 type Project = {
   id: string;
@@ -25,9 +25,9 @@ type Project = {
 type ClientOption = { id: string; company_name: string };
 
 const STATUS_LABEL: Record<Status, string> = {
-  collecting: 'Collecting',
-  processing: 'Processing',
-  finishing: 'Finishing',
+  not_started: 'Not Started',
+  in_progress: 'In Progress',
+  review: 'Review',
   done: 'Done',
 };
 
@@ -168,7 +168,7 @@ export default async function ProjectsPage() {
                         )}
                       </td>
                       <td>
-                        <span className={`badge badge-${p.status}`}>{STATUS_LABEL[p.status]}</span>
+                        <span className={`badge badge-${p.status.replace('_', '-')}`}>{STATUS_LABEL[p.status]}</span>
                       </td>
                       <td className="sub">
                         {p.project_links.length > 0 ? (

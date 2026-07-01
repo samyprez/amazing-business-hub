@@ -4,7 +4,7 @@ import { redirect } from 'next/navigation';
 import { revalidatePath } from 'next/cache';
 import { createClient } from '@/lib/supabase/server';
 
-type Status = 'collecting' | 'processing' | 'finishing' | 'done';
+type Status = 'not_started' | 'in_progress' | 'review' | 'done';
 
 async function requireStaff() {
   const supabase = await createClient();

@@ -11,7 +11,7 @@ async function requireStaff() {
   return { error: null, status: 200 as const, supabase };
 }
 
-const STATUSES = ['collecting', 'processing', 'finishing', 'done'];
+const STATUSES = ['not_started', 'in_progress', 'review', 'done'];
 
 export async function GET() {
   const gate = await requireStaff();
@@ -35,7 +35,7 @@ export async function POST(req: Request) {
 
   const { data, error } = await gate.supabase
     .from('projects')
-    .insert({ name: body.name.trim(), client_id: body.client_id || null, completion_date: body.completion_date || null, status: body.status || 'collecting' })
+    .insert({ name: body.name.trim(), client_id: body.client_id || null, completion_date: body.completion_date || null, status: body.status || 'not_started' })
     .select('id, name, status, completion_date, created_at, client_id, clients(company_name), project_links(id, title, url)')
     .single();
 

@@ -65,9 +65,9 @@ export default function NewProjectButton({ clients }: { clients: ClientOption[] 
               <div className="field">
                 <label htmlFor="np-status">Status</label>
                 <select id="np-status" name="status">
-                  <option value="collecting">Collecting</option>
-                  <option value="processing">Processing</option>
-                  <option value="finishing">Finishing</option>
+                  <option value="not_started">Not Started</option>
+                  <option value="in_progress">In Progress</option>
+                  <option value="review">Review</option>
                   <option value="done">Done</option>
                 </select>
               </div>
