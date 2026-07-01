@@ -53,9 +53,8 @@ export async function POST(request: Request) {
       company_name: companyName,
       contact_name: (body.contact_name || '').trim() || null,
       email: (body.email || '').trim() || null,
-      is_active: true,
     })
-    .select('id, company_name')
+    .select('id, company_name, contact_name, email')
     .single();
 
   if (error) {
@@ -84,7 +83,7 @@ export async function GET() {
 
   const { data, error } = await supabase
     .from('clients')
-    .select('id, company_name, contact_name, email, is_active')
+    .select('id, company_name, contact_name, email')
     .order('company_name', { ascending: true });
 
   if (error) {

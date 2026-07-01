@@ -26,11 +26,9 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   if (body.company_name !== undefined) patch.company_name = (body.company_name || '').trim() || null;
   if (body.contact_name !== undefined) patch.contact_name = (body.contact_name || '').toString().trim() || null;
   if (body.email !== undefined) patch.email = (body.email || '').toString().trim() || null;
-  if (body.is_active !== undefined) patch.is_active = Boolean(body.is_active);
-
   const { data, error } = await gate.supabase
     .from('clients').update(patch).eq('id', id)
-    .select('id, company_name, contact_name, email, is_active').single();
+    .select('id, company_name, contact_name, email').single();
 
   if (error) return NextResponse.json({ error: error.message }, { status: 400 });
   return NextResponse.json({ client: data });
