@@ -28,8 +28,6 @@ type Lead = {
   id: string;
   name: string;
   email: string | null;
-  phone: string | null;
-  source: string | null;
   status: Status;
   created_at: string;
 };
@@ -40,8 +38,6 @@ const STATUS_LABEL: Record<Status, string> = {
   converted: 'Converted',
   lost: 'Lost',
 };
-
-const SOURCES = ['Web', 'Referral', 'Social Media', 'Phone', 'Event', 'Other'];
 
 function statusStyle(s: Status): React.CSSProperties {
   const map: Record<Status, { background: string; color: string }> = {
@@ -71,8 +67,6 @@ export default function LeadsModal() {
 
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
-  const [phone, setPhone] = useState('');
-  const [source, setSource] = useState('');
 
   const loadedRef = useRef(false);
 
@@ -136,14 +130,12 @@ export default function LeadsModal() {
         body: JSON.stringify({
           name: name.trim(),
           email: email.trim() || null,
-          phone: phone.trim() || null,
-          source: source || null,
         }),
       });
       const json = await res.json();
       if (!res.ok) throw new Error(json?.error || 'No se pudo crear el lead.');
       setLeads((prev) => [json.lead as Lead, ...prev]);
-      setName(''); setEmail(''); setPhone(''); setSource('');
+      setName(''); setEmail('');
       setShowForm(false);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Error inesperado.');
@@ -201,11 +193,6 @@ export default function LeadsModal() {
             </div>
             <div style={{ display: 'flex', gap: 10 }}>
               <input style={{ ...input, flex: 1 }} placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} />
-              <input style={{ ...input, flex: 1 }} placeholder="Teléfono" value={phone} onChange={(e) => setPhone(e.target.value)} />
-              <select style={{ ...input, width: 170 }} value={source} onChange={(e) => setSource(e.target.value)}>
-                <option value="">— Origen —</option>
-                {SOURCES.map((s) => <option key={s} value={s}>{s}</option>)}
-              </select>
             </div>
             <button style={{ ...saveBtn, opacity: name.trim() && !saving ? 1 : 0.5 }} onClick={createLead} disabled={!name.trim() || saving}>
               {saving ? 'Guardando…' : 'Crear lead'}
@@ -226,7 +213,6 @@ export default function LeadsModal() {
                 <tr>
                   <th style={th}>Contacto</th>
                   <th style={th}>Email</th>
-                  <th style={th}>Origen</th>
                   <th style={th}>Fecha</th>
                   <th style={th}>Etapa</th>
                 </tr>
@@ -239,7 +225,6 @@ export default function LeadsModal() {
                     <tr key={l.id}>
                       <td style={{ ...td, fontWeight: 700 }}>{l.name}</td>
                       <td style={td}>{l.email || '—'}</td>
-                      <td style={td}>{l.source || '—'}</td>
                       <td style={{ ...td, color: C.sub }}>{fmtDate(l.created_at)}</td>
                       <td style={td}>
                         <select

@@ -1,11 +1,13 @@
 // app/api/leads/route.ts
-// Columns confirmed in DB: id, name, email, phone, source, status, created_at
+// Only uses columns confirmed in DB: id, name, email, status, created_at
+// Run SQL to add optional columns: ALTER TABLE leads ADD COLUMN IF NOT EXISTS phone text;
+//                                  ALTER TABLE leads ADD COLUMN IF NOT EXISTS source text;
 
 import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 
 const STATUSES = ['new', 'contacted', 'converted', 'lost'];
-const SELECT = 'id, name, email, phone, source, status, created_at';
+const SELECT = 'id, name, email, status, created_at';
 
 async function requireStaff() {
   const supabase = await createClient();
@@ -32,15 +34,13 @@ export async function POST(request: Request) {
   const gate = await requireStaff();
   if (gate.error || !gate.supabase) return NextResponse.json({ error: gate.error }, { status: gate.status });
 
-  const body = await request.json() as { name?: string; email?: string | null; phone?: string | null; source?: string | null };
+  const body = await request.json() as { name?: string; email?: string | null };
   const name = (body.name || '').trim();
   if (!name) return NextResponse.json({ error: 'El nombre es obligatorio.' }, { status: 400 });
 
-  const clean = (v: string | null | undefined) => (v || '').trim() || null;
-
   const { data, error } = await gate.supabase
     .from('leads')
-    .insert({ name, email: clean(body.email), phone: clean(body.phone), source: clean(body.source), status: 'new' })
+    .insert({ name, email: (body.email || '').trim() || null, status: 'new' })
     .select(SELECT).single();
 
   if (error) return NextResponse.json({ error: error.message }, { status: 400 });
