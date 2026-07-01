@@ -7,7 +7,7 @@ const C = {
   line: '#e7eded', mist: '#eafaf7',
 };
 
-type Member = { id: string; full_name: string | null; role: string; avatar_url: string | null; created_at: string; };
+type Member = { id: string; full_name: string | null; role: string; avatar_url?: string | null; created_at: string; };
 
 const ROLE_LABEL: Record<string, string> = {
   super_admin: 'Super Admin', admin: 'Admin', staff: 'Staff', client: 'Client',
