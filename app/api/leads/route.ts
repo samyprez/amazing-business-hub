@@ -1,82 +1,47 @@
-﻿// app/api/leads/route.ts
-//
-// API de Leads. Corre server-side con la sesion del usuario (RLS aplica).
-//  GET   -> lista todos los leads
-//  POST  -> crea un lead  { name*, company?, email?, phone?, source?, notes? }
-//  PATCH -> actualiza estado  { id*, status }
+// app/api/leads/route.ts
+// Columns confirmed in DB: id, name, email, phone, source, status, created_at
 
 import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 
 const STATUSES = ['new', 'contacted', 'converted', 'lost'];
+const SELECT = 'id, name, email, phone, source, status, created_at';
 
 async function requireStaff() {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { error: 'No autenticado.', status: 401 as const, supabase: null };
-
-  const { data: profile } = await supabase
-    .from('profiles').select('role').eq('id', user.id).single();
-  const role = profile?.role;
-  if (!role || !['staff', 'admin', 'super_admin'].includes(role)) {
+  const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single();
+  if (!['staff', 'admin', 'super_admin'].includes(profile?.role ?? ''))
     return { error: 'Sin permiso.', status: 403 as const, supabase: null };
-  }
   return { error: null, status: 200 as const, supabase };
 }
 
 export async function GET() {
   const gate = await requireStaff();
-  if (gate.error || !gate.supabase) {
-    return NextResponse.json({ error: gate.error }, { status: gate.status });
-  }
+  if (gate.error || !gate.supabase) return NextResponse.json({ error: gate.error }, { status: gate.status });
 
   const { data, error } = await gate.supabase
-    .from('leads')
-    .select('id, name, email, phone, source, status, notes, created_at')
-    .order('created_at', { ascending: false });
+    .from('leads').select(SELECT).order('created_at', { ascending: false });
 
   if (error) return NextResponse.json({ error: error.message }, { status: 400 });
-  return NextResponse.json({ leads: data ?? [] }, { status: 200 });
+  return NextResponse.json({ leads: data ?? [] });
 }
 
 export async function POST(request: Request) {
   const gate = await requireStaff();
-  if (gate.error || !gate.supabase) {
-    return NextResponse.json({ error: gate.error }, { status: gate.status });
-  }
+  if (gate.error || !gate.supabase) return NextResponse.json({ error: gate.error }, { status: gate.status });
 
-  let body: {
-    name?: string;
-    email?: string | null;
-    phone?: string | null;
-    source?: string | null;
-    notes?: string | null;
-  };
-  try {
-    body = await request.json();
-  } catch {
-    return NextResponse.json({ error: 'Cuerpo invalido.' }, { status: 400 });
-  }
-
+  const body = await request.json() as { name?: string; email?: string | null; phone?: string | null; source?: string | null };
   const name = (body.name || '').trim();
-  if (!name) {
-    return NextResponse.json({ error: 'El nombre es obligatorio.' }, { status: 400 });
-  }
+  if (!name) return NextResponse.json({ error: 'El nombre es obligatorio.' }, { status: 400 });
 
-  const clean = (v: string | null | undefined) => (v || '').toString().trim() || null;
+  const clean = (v: string | null | undefined) => (v || '').trim() || null;
 
   const { data, error } = await gate.supabase
     .from('leads')
-    .insert({
-      name,
-      email: clean(body.email),
-      phone: clean(body.phone),
-      source: clean(body.source),
-      notes: clean(body.notes),
-      status: 'new',
-    })
-    .select('id, name, email, phone, source, status, notes, created_at')
-    .single();
+    .insert({ name, email: clean(body.email), phone: clean(body.phone), source: clean(body.source), status: 'new' })
+    .select(SELECT).single();
 
   if (error) return NextResponse.json({ error: error.message }, { status: 400 });
   return NextResponse.json({ lead: data }, { status: 201 });
@@ -84,31 +49,15 @@ export async function POST(request: Request) {
 
 export async function PATCH(request: Request) {
   const gate = await requireStaff();
-  if (gate.error || !gate.supabase) {
-    return NextResponse.json({ error: gate.error }, { status: gate.status });
-  }
+  if (gate.error || !gate.supabase) return NextResponse.json({ error: gate.error }, { status: gate.status });
 
-  let body: { id?: string; status?: string };
-  try {
-    body = await request.json();
-  } catch {
-    return NextResponse.json({ error: 'Cuerpo invalido.' }, { status: 400 });
-  }
-
-  if (!body.id) {
-    return NextResponse.json({ error: 'Falta el id del lead.' }, { status: 400 });
-  }
-  if (!body.status || !STATUSES.includes(body.status)) {
-    return NextResponse.json({ error: 'Estado invalido.' }, { status: 400 });
-  }
+  const body = await request.json() as { id?: string; status?: string };
+  if (!body.id) return NextResponse.json({ error: 'Falta el id.' }, { status: 400 });
+  if (!body.status || !STATUSES.includes(body.status)) return NextResponse.json({ error: 'Estado invalido.' }, { status: 400 });
 
   const { data, error } = await gate.supabase
-    .from('leads')
-    .update({ status: body.status })
-    .eq('id', body.id)
-    .select('id, status')
-    .single();
+    .from('leads').update({ status: body.status }).eq('id', body.id).select('id, status').single();
 
   if (error) return NextResponse.json({ error: error.message }, { status: 400 });
-  return NextResponse.json({ lead: data }, { status: 200 });
+  return NextResponse.json({ lead: data });
 }

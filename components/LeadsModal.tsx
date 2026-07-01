@@ -31,7 +31,6 @@ type Lead = {
   phone: string | null;
   source: string | null;
   status: Status;
-  notes: string | null;
   created_at: string;
 };
 
@@ -74,7 +73,6 @@ export default function LeadsModal() {
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
   const [source, setSource] = useState('');
-  const [notes, setNotes] = useState('');
 
   const loadedRef = useRef(false);
 
@@ -140,13 +138,12 @@ export default function LeadsModal() {
           email: email.trim() || null,
           phone: phone.trim() || null,
           source: source || null,
-          notes: notes.trim() || null,
         }),
       });
       const json = await res.json();
       if (!res.ok) throw new Error(json?.error || 'No se pudo crear el lead.');
       setLeads((prev) => [json.lead as Lead, ...prev]);
-      setName(''); setEmail(''); setPhone(''); setSource(''); setNotes('');
+      setName(''); setEmail(''); setPhone(''); setSource('');
       setShowForm(false);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Error inesperado.');
@@ -210,7 +207,6 @@ export default function LeadsModal() {
                 {SOURCES.map((s) => <option key={s} value={s}>{s}</option>)}
               </select>
             </div>
-            <textarea style={{ ...input, height: 64, paddingTop: 10, resize: 'vertical' }} placeholder="Notas (opcional)" value={notes} onChange={(e) => setNotes(e.target.value)} />
             <button style={{ ...saveBtn, opacity: name.trim() && !saving ? 1 : 0.5 }} onClick={createLead} disabled={!name.trim() || saving}>
               {saving ? 'Guardando…' : 'Crear lead'}
             </button>
