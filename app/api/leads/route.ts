@@ -32,7 +32,7 @@ export async function GET() {
 
   const { data, error } = await gate.supabase
     .from('leads')
-    .select('id, name, company, email, phone, source, status, notes, created_at')
+    .select('id, name, email, phone, source, status, notes, created_at')
     .order('created_at', { ascending: false });
 
   if (error) return NextResponse.json({ error: error.message }, { status: 400 });
@@ -47,7 +47,6 @@ export async function POST(request: Request) {
 
   let body: {
     name?: string;
-    company?: string | null;
     email?: string | null;
     phone?: string | null;
     source?: string | null;
@@ -70,14 +69,13 @@ export async function POST(request: Request) {
     .from('leads')
     .insert({
       name,
-      company: clean(body.company),
       email: clean(body.email),
       phone: clean(body.phone),
       source: clean(body.source),
       notes: clean(body.notes),
       status: 'new',
     })
-    .select('id, name, company, email, phone, source, status, notes, created_at')
+    .select('id, name, email, phone, source, status, notes, created_at')
     .single();
 
   if (error) return NextResponse.json({ error: error.message }, { status: 400 });

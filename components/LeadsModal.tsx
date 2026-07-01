@@ -27,7 +27,6 @@ type Status = 'new' | 'contacted' | 'converted' | 'lost';
 type Lead = {
   id: string;
   name: string;
-  company: string | null;
   email: string | null;
   phone: string | null;
   source: string | null;
@@ -72,7 +71,6 @@ export default function LeadsModal() {
   const [saving, setSaving] = useState(false);
 
   const [name, setName] = useState('');
-  const [company, setCompany] = useState('');
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
   const [source, setSource] = useState('');
@@ -139,7 +137,6 @@ export default function LeadsModal() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           name: name.trim(),
-          company: company.trim() || null,
           email: email.trim() || null,
           phone: phone.trim() || null,
           source: source || null,
@@ -149,7 +146,7 @@ export default function LeadsModal() {
       const json = await res.json();
       if (!res.ok) throw new Error(json?.error || 'No se pudo crear el lead.');
       setLeads((prev) => [json.lead as Lead, ...prev]);
-      setName(''); setCompany(''); setEmail(''); setPhone(''); setSource(''); setNotes('');
+      setName(''); setEmail(''); setPhone(''); setSource(''); setNotes('');
       setShowForm(false);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Error inesperado.');
@@ -204,7 +201,6 @@ export default function LeadsModal() {
           <div style={formBox}>
             <div style={{ display: 'flex', gap: 10 }}>
               <input style={{ ...input, flex: 1 }} placeholder="Nombre del contacto *" value={name} onChange={(e) => setName(e.target.value)} autoFocus />
-              <input style={{ ...input, flex: 1 }} placeholder="Empresa" value={company} onChange={(e) => setCompany(e.target.value)} />
             </div>
             <div style={{ display: 'flex', gap: 10 }}>
               <input style={{ ...input, flex: 1 }} placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} />
@@ -233,7 +229,6 @@ export default function LeadsModal() {
               <thead>
                 <tr>
                   <th style={th}>Contacto</th>
-                  <th style={th}>Empresa</th>
                   <th style={th}>Email</th>
                   <th style={th}>Origen</th>
                   <th style={th}>Fecha</th>
@@ -247,7 +242,6 @@ export default function LeadsModal() {
                   leads.map((l) => (
                     <tr key={l.id}>
                       <td style={{ ...td, fontWeight: 700 }}>{l.name}</td>
-                      <td style={td}>{l.company || '—'}</td>
                       <td style={td}>{l.email || '—'}</td>
                       <td style={td}>{l.source || '—'}</td>
                       <td style={{ ...td, color: C.sub }}>{fmtDate(l.created_at)}</td>
