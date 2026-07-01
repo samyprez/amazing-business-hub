@@ -28,6 +28,7 @@ type Lead = {
   id: string;
   name: string;
   email: string | null;
+  phone: string | null;
   status: Status;
   created_at: string;
 };
@@ -67,6 +68,7 @@ export default function LeadsModal() {
 
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
+  const [phone, setPhone] = useState('');
 
   const loadedRef = useRef(false);
 
@@ -130,12 +132,13 @@ export default function LeadsModal() {
         body: JSON.stringify({
           name: name.trim(),
           email: email.trim() || null,
+          phone: phone.trim() || null,
         }),
       });
       const json = await res.json();
       if (!res.ok) throw new Error(json?.error || 'No se pudo crear el lead.');
       setLeads((prev) => [json.lead as Lead, ...prev]);
-      setName(''); setEmail('');
+      setName(''); setEmail(''); setPhone('');
       setShowForm(false);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Error inesperado.');
@@ -193,6 +196,7 @@ export default function LeadsModal() {
             </div>
             <div style={{ display: 'flex', gap: 10 }}>
               <input style={{ ...input, flex: 1 }} placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} />
+              <input style={{ ...input, flex: 1 }} placeholder="Phone / WhatsApp" value={phone} onChange={(e) => setPhone(e.target.value)} />
             </div>
             <button style={{ ...saveBtn, opacity: name.trim() && !saving ? 1 : 0.5 }} onClick={createLead} disabled={!name.trim() || saving}>
               {saving ? 'Guardando…' : 'Crear lead'}
@@ -213,18 +217,20 @@ export default function LeadsModal() {
                 <tr>
                   <th style={th}>Contacto</th>
                   <th style={th}>Email</th>
+                  <th style={th}>Teléfono</th>
                   <th style={th}>Fecha</th>
                   <th style={th}>Etapa</th>
                 </tr>
               </thead>
               <tbody>
                 {loading ? (
-                  <tr><td style={td} colSpan={6}>Cargando leads…</td></tr>
+                  <tr><td style={td} colSpan={7}>Cargando leads…</td></tr>
                 ) : (
                   leads.map((l) => (
                     <tr key={l.id}>
                       <td style={{ ...td, fontWeight: 700 }}>{l.name}</td>
                       <td style={td}>{l.email || '—'}</td>
+                      <td style={{ ...td, color: C.sub }}>{l.phone || '—'}</td>
                       <td style={{ ...td, color: C.sub }}>{fmtDate(l.created_at)}</td>
                       <td style={td}>
                         <select
