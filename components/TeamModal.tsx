@@ -32,9 +32,11 @@ export default function TeamModal() {
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
 
   const [showInvite, setShowInvite] = useState(false);
+  const [invMode, setInvMode] = useState<'password' | 'email'>('password');
   const [invEmail, setInvEmail] = useState('');
   const [invName, setInvName] = useState('');
   const [invRole, setInvRole] = useState('staff');
+  const [invPassword, setInvPassword] = useState('');
   const [inviting, setInviting] = useState(false);
   const [invSuccess, setInvSuccess] = useState<string | null>(null);
 
@@ -82,19 +84,27 @@ export default function TeamModal() {
 
   async function invite() {
     if (!invEmail.trim()) return;
-    setInviting(true);
-    setInvSuccess(null);
-    setError(null);
+    if (invMode === 'password' && invPassword.length < 8) {
+      setError('Password must be at least 8 characters.'); return;
+    }
+    setInviting(true); setInvSuccess(null); setError(null);
     try {
-      const res = await fetch('/api/team/invite', {
+      const endpoint = invMode === 'password' ? '/api/team/create' : '/api/team/invite';
+      const body = invMode === 'password'
+        ? { email: invEmail.trim(), full_name: invName.trim(), role: invRole, password: invPassword }
+        : { email: invEmail.trim(), full_name: invName.trim(), role: invRole };
+      const res = await fetch(endpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: invEmail.trim(), full_name: invName.trim(), role: invRole }),
+        body: JSON.stringify(body),
       });
       const d = await res.json() as { ok?: boolean; error?: string };
       if (d.error) { setError(d.error); return; }
-      setInvSuccess(`✓ Invite sent to ${invEmail}! They'll receive an email to set their password.`);
-      setInvEmail(''); setInvName(''); setInvRole('staff');
+      const msg = invMode === 'password'
+        ? `✓ Account created for ${invEmail}. They can log in at /login with the password you set.`
+        : `✓ Invite sent to ${invEmail}. They'll receive an email to set their password.`;
+      setInvSuccess(msg);
+      setInvEmail(''); setInvName(''); setInvRole('staff'); setInvPassword('');
       setShowInvite(false);
       void load();
     } finally { setInviting(false); }
@@ -146,8 +156,25 @@ export default function TeamModal() {
 
         {/* Invite form */}
         {showInvite && (
-          <div style={{ background: C.mist, borderRadius: 14, padding: '18px 20px', display: 'flex', flexDirection: 'column', gap: 12 }}>
-            <div style={{ fontSize: 14, fontWeight: 800, color: C.ink }}>Invite a New Team Member</div>
+          <div style={{ background: C.mist, borderRadius: 14, padding: '18px 20px', display: 'flex', flexDirection: 'column', gap: 14 }}>
+            {/* Mode tabs */}
+            <div style={{ display: 'flex', gap: 0, borderRadius: 10, overflow: 'hidden', border: `1px solid ${C.line}`, alignSelf: 'flex-start' }}>
+              {(['password', 'email'] as const).map(mode => (
+                <button key={mode} onClick={() => setInvMode(mode)} style={{
+                  padding: '7px 16px', fontSize: 12.5, fontWeight: 700, border: 'none', cursor: 'pointer', fontFamily: 'inherit',
+                  background: invMode === mode ? C.teal : '#fff', color: invMode === mode ? '#fff' : C.sub,
+                }}>
+                  {mode === 'password' ? '🔑 Set Password' : '✉ Send Invite Email'}
+                </button>
+              ))}
+            </div>
+
+            <div style={{ fontSize: 12.5, color: C.sub }}>
+              {invMode === 'password'
+                ? 'Create the account now with a password — share credentials with the member directly.'
+                : 'Send an email invite — the member sets their own password by clicking the link.'}
+            </div>
+
             <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
               <input style={inp} placeholder="Full name" value={invName} onChange={e => setInvName(e.target.value)} />
               <input style={inp} placeholder="Email address *" type="email" value={invEmail} onChange={e => setInvEmail(e.target.value)} />
@@ -155,16 +182,26 @@ export default function TeamModal() {
                 {ROLES.map(r => <option key={r} value={r}>{ROLE_LABEL[r]}</option>)}
               </select>
             </div>
+
+            {invMode === 'password' && (
+              <input
+                style={{ ...inp, maxWidth: 260 }}
+                placeholder="Password (min 8 chars) *"
+                type="password"
+                value={invPassword}
+                onChange={e => setInvPassword(e.target.value)}
+              />
+            )}
+
             <button
-              style={{ ...primaryBtn, alignSelf: 'flex-start', opacity: invEmail.trim() ? 1 : 0.5 }}
+              style={{ ...primaryBtn, alignSelf: 'flex-start', opacity: (invEmail.trim() && (invMode === 'email' || invPassword.length >= 8)) ? 1 : 0.5 }}
               onClick={invite}
-              disabled={inviting || !invEmail.trim()}
+              disabled={inviting || !invEmail.trim() || (invMode === 'password' && invPassword.length < 8)}
             >
-              {inviting ? 'Sending invite…' : 'Send Invite Email'}
+              {inviting
+                ? 'Creating…'
+                : invMode === 'password' ? 'Create Account' : 'Send Invite Email'}
             </button>
-            <div style={{ fontSize: 12, color: C.sub }}>
-              They&apos;ll receive an email to set their password and access the dashboard.
-            </div>
           </div>
         )}
 
